@@ -10,6 +10,10 @@ package vazkii.botania.common.block.block_entity.mana;
 
 import com.mojang.blaze3d.platform.Window;
 
+import dev.ryanhcode.sable.companion.SubLevelAccess;
+import dev.ryanhcode.sable.companion.math.Pose3dc;
+import dev.ryanhcode.sable.companion.SableCompanion;
+
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
@@ -38,12 +42,16 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
+import org.joml.Quaterniond;
+import org.joml.Quaterniondc;
+import org.joml.Vector3d;
 import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.BotaniaAPIClient;
 import vazkii.botania.api.block.Bound;
 import vazkii.botania.api.block.WandBindable;
 import vazkii.botania.api.block.WandHUD;
 import vazkii.botania.api.block.Wandable;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.internal.ManaBurst;
 import vazkii.botania.api.mana.*;
 import vazkii.botania.client.core.helper.RenderHelper;
@@ -63,6 +71,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+
+import static java.lang.Math.asin;
+import static java.lang.Math.atan2;
 
 public class ManaSpreaderBlockEntity extends ExposedSimpleInventoryBlockEntity implements WandBindable, Bound, KeyLocked, ThrottledPacket, ManaSpreader, Wandable {
 	private static final int TICKS_ALLOWED_WITHOUT_PINGBACK = 20;
@@ -630,8 +641,30 @@ public class ManaSpreaderBlockEntity extends ExposedSimpleInventoryBlockEntity i
 		VoxelShape shape = player.level().getBlockState(pos).getShape(player.level(), pos);
 		AABB axis = shape.isEmpty() ? new AABB(pos) : shape.bounds().move(pos);
 
-		Vec3 thisVec = Vec3.atCenterOf(getBlockPos());
-		Vec3 blockVec = new Vec3(axis.minX + (axis.maxX - axis.minX) / 2, axis.minY + (axis.maxY - axis.minY) / 2, axis.minZ + (axis.maxZ - axis.minZ) / 2);
+		Vec3 thisVec = SableCompat.transformFromSable(player.level(), Vec3.atCenterOf(getBlockPos()));
+		Vec3 blockVec = SableCompat.transformFromSable(player.level(), axis.getCenter());
+
+		SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(player.level(), getBlockPos());
+		if (subLevel != null) {
+			Pose3dc pose = subLevel.logicalPose();
+
+			// Извлекаем оси sublevel через два вызова transformPosition
+			// Берём любую точку в мировом пространстве — thisVec уже в мировых координатах
+			// Но transformPosition ожидает локальные — нужна другая точка отсчёта
+			Vec3 worldOrigin = pose.transformPosition(Vec3.ZERO);  // начало sublevel в мировых координатах
+			Vec3 worldAxisX  = pose.transformPosition(new Vec3(1, 0, 0)).subtract(worldOrigin);
+			Vec3 worldAxisY  = pose.transformPosition(new Vec3(0, 1, 0)).subtract(worldOrigin);
+			Vec3 worldAxisZ  = pose.transformPosition(new Vec3(0, 0, 1)).subtract(worldOrigin);
+
+			Vec3 diffVecWorld = blockVec.subtract(thisVec);
+
+			// Проецируем мировой вектор на локальные оси sublevel (R^T * v)
+			double localX = diffVecWorld.dot(worldAxisX);
+			double localY = diffVecWorld.dot(worldAxisY);
+			double localZ = diffVecWorld.dot(worldAxisZ);
+
+			blockVec = thisVec.add(localX, localY, localZ);
+		}
 
 		Vec3 diffVec = blockVec.subtract(thisVec);
 		Vec3 diffVec2D = new Vec3(diffVec.x, diffVec.z, 0);

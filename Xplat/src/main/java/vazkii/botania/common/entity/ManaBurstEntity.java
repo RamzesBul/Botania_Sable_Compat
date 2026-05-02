@@ -8,6 +8,10 @@
  */
 package vazkii.botania.common.entity;
 
+import dev.ryanhcode.sable.companion.SableCompanion;
+import dev.ryanhcode.sable.companion.SubLevelAccess;
+import dev.ryanhcode.sable.companion.math.BoundingBox3d;
+import dev.ryanhcode.sable.companion.math.Pose3dc;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.Registries;
@@ -42,6 +46,7 @@ import net.minecraft.world.phys.Vec3;
 
 import org.jetbrains.annotations.Nullable;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.internal.ManaBurst;
 import vazkii.botania.api.mana.*;
 import vazkii.botania.client.fx.SparkleParticleData;
@@ -396,6 +401,7 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 		float b = (color & 0xFF) / 255F;
 		float osize = getParticleSize();
 		float size = osize;
+		Vec3 particlePos = SableCompat.transformFromSable(level(), new Vec3(getX(), getY(), getZ()));
 
 		if (fake) {
 			if (getMana() == getStartingMana()) {
@@ -406,7 +412,7 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 
 			if (!noParticles && shouldDoFakeParticles()) {
 				SparkleParticleData data = SparkleParticleData.fake(0.4F * size, r, g, b, 1);
-				level().addParticle(data, true, getX(), getY(), getZ(), 0, 0, 0);
+				level().addParticle(data, true, particlePos.x, particlePos.y, particlePos.z, 0, 0, 0);
 			}
 		} else {
 			Player player = Proxy.INSTANCE.getClientPlayer();
@@ -422,12 +428,12 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 
 				double luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b; // Standard relative luminance calculation
 
-				double iterX = getX();
-				double iterY = getY();
-				double iterZ = getZ();
+				double iterX = particlePos.x;
+				double iterY = particlePos.y;
+				double iterZ = particlePos.z;
 
-				Vec3 currentPos = position();
-				Vec3 oldPos = new Vec3(xo, yo, zo);
+				Vec3 currentPos = SableCompat.transformFromSable(level(), position());
+				Vec3 oldPos = SableCompat.transformFromSable(level(), new Vec3(xo, yo, zo));
 				Vec3 diffVec = oldPos.subtract(currentPos);
 				Vec3 diffVecNorm = diffVec.normalize();
 
@@ -874,7 +880,7 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 
 	public record PositionProperties(BlockPos coords, BlockState state) {
 		public static PositionProperties fromEntity(Entity entity) {
-			return new PositionProperties(entity.blockPosition(), entity.getBlockStateOn());
+			return new PositionProperties(SableCompat.transformFromSable(entity.level(), entity.blockPosition()), entity.getBlockStateOn());
 		}
 
 		public boolean coordsEqual(PositionProperties props) {
@@ -886,7 +892,7 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 		}
 
 		public boolean contentsEqual(Level world) {
-			if (isInvalidIn(world)) {
+			if (isInvalidIn(world) && !SableCompanion.INSTANCE.isInPlotGrid(world, coords)) {
 				return false;
 			}
 

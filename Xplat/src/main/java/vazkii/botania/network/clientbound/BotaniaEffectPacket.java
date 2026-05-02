@@ -27,6 +27,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.fx.SparkleParticleData;
 import vazkii.botania.client.fx.WispParticleData;
 import vazkii.botania.common.block.block_entity.TerrestrialAgglomerationPlateBlockEntity;
@@ -152,8 +153,8 @@ public record BotaniaEffectPacket(EffectType effectType, double x, double y, dou
 				return;
 			}
 
-			Vec3 orig = new Vec3(e1.getX(), e1.getY() + 0.25, e1.getZ());
-			Vec3 end = new Vec3(e2.getX(), e2.getY() + 0.25, e2.getZ());
+			Vec3 orig = SableCompat.transformFromSable(world, new Vec3(e1.getX(), e1.getY() + 0.25, e1.getZ()));
+			Vec3 end = SableCompat.transformFromSable(world, new Vec3(e2.getX(), e2.getY() + 0.25, e2.getZ()));
 			Vec3 diff = end.subtract(orig);
 			Vec3 movement = diff.normalize().scale(0.1);
 			int iters = (int) (diff.length() / movement.length());
@@ -184,8 +185,8 @@ public record BotaniaEffectPacket(EffectType effectType, double x, double y, dou
 			}
 
 			double rc = 0.45;
-			Vec3 thisVec = VecHelper.fromEntityCenter(e1).add((Math.random() - 0.5) * rc, (Math.random() - 0.5) * rc, (Math.random() - 0.5) * rc);
-			Vec3 receiverVec = VecHelper.fromEntityCenter(e2).add((Math.random() - 0.5) * rc, (Math.random() - 0.5) * rc, (Math.random() - 0.5) * rc);
+			Vec3 thisVec = SableCompat.transformFromSable(world, VecHelper.fromEntityCenter(e1).add((Math.random() - 0.5) * rc, (Math.random() - 0.5) * rc, (Math.random() - 0.5) * rc));
+			Vec3 receiverVec = SableCompat.transformFromSable(world, VecHelper.fromEntityCenter(e2).add((Math.random() - 0.5) * rc, (Math.random() - 0.5) * rc, (Math.random() - 0.5) * rc));
 
 			Vec3 motion = receiverVec.subtract(thisVec).scale(0.04);
 			int color = args[2];

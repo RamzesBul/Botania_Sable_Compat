@@ -103,4 +103,6 @@ dependencies {
     if (file("../garden_of_glass/gardenofglass-${gog_version}.jar").exists()) {
         modLocalRuntime files("../garden_of_glass/gardenofglass-${gog_version}.jar")
     }
+
+    include(modApi("dev.ryanhcode.sable-companion:sable-companion-fabric-${minecraft_version}:1.6.0"))
 }
