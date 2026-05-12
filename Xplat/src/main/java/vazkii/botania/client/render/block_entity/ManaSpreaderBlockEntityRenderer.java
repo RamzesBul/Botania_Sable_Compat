@@ -26,6 +26,7 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import vazkii.botania.api.state.BotaniaStateProperties;
 import vazkii.botania.client.core.handler.ClientTickHandler;
@@ -60,11 +61,7 @@ public class ManaSpreaderBlockEntityRenderer implements BlockEntityRenderer<Mana
 		ms.pushPose();
 
 		ms.translate(0.5F, 0.5, 0.5F);
-
-		Quaternionf transform = VecHelper.rotateY(spreader.rotationX + 90F);
-		transform.mul(VecHelper.rotateX(spreader.rotationY));
-		ms.mulPose(transform);
-
+		ms.mulPose(buildAimRotation(spreader));
 		ms.translate(-0.5F, -0.5F, -0.5F);
 
 		float time = ClientTickHandler.getEntityTicksInGame() + partialTick + new Random(spreader.getBlockState().getSeed(spreader.getBlockPos())).nextFloat() * 360;
@@ -132,6 +129,13 @@ public class ManaSpreaderBlockEntityRenderer implements BlockEntityRenderer<Mana
 							scaffolding, r, g, b, light, overlay);
 		}
 
+	}
+
+	private static Quaternionf buildAimRotation(ManaSpreaderBlockEntity spreader) {
+		Quaternionf qYaw = new Quaternionf().rotationAxis(
+				(float) Math.toRadians(spreader.rotationX + 90F), new Vector3f(0, 1, 0));
+		Vector3f pitchAxis = qYaw.transform(new Vector3f(1, 0, 0));
+		return new Quaternionf().rotationAxis((float) Math.toRadians(spreader.rotationY), pitchAxis).mul(qYaw);
 	}
 
 	private BakedModel getCoreModel(ManaSpreaderBlockEntity tile) {
