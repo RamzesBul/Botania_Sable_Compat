@@ -10,9 +10,8 @@ package vazkii.botania.common.block.block_entity.mana;
 
 import com.mojang.blaze3d.platform.Window;
 
-import dev.ryanhcode.sable.companion.SubLevelAccess;
-import dev.ryanhcode.sable.companion.math.Pose3dc;
 import dev.ryanhcode.sable.companion.SableCompanion;
+import dev.ryanhcode.sable.companion.SubLevelAccess;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -34,17 +33,17 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.VoxelShape;
 
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
-import org.joml.Quaterniond;
 import org.joml.Quaterniondc;
 import org.joml.Vector3d;
+
 import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.BotaniaAPIClient;
 import vazkii.botania.api.block.Bound;
@@ -62,7 +61,6 @@ import vazkii.botania.common.entity.ManaBurstEntity;
 import vazkii.botania.common.entity.ManaBurstEntity.PositionProperties;
 import vazkii.botania.common.handler.BotaniaSounds;
 import vazkii.botania.common.handler.ManaNetworkHandler;
-import vazkii.botania.common.helper.MathHelper;
 import vazkii.botania.common.item.LexicaBotaniaItem;
 import vazkii.botania.xplat.BotaniaConfig;
 
@@ -71,7 +69,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import static java.lang.Math.asin;
 import static java.lang.Math.atan2;
 
 public class ManaSpreaderBlockEntity extends ExposedSimpleInventoryBlockEntity
@@ -653,45 +650,17 @@ public class ManaSpreaderBlockEntity extends ExposedSimpleInventoryBlockEntity
 		Vec3 thisVec = SableCompat.transformFromSable(player.level(), Vec3.atCenterOf(getBlockPos()));
 		Vec3 blockVec = SableCompat.transformFromSable(player.level(), axis.getCenter());
 
+		Vec3 diffVec = blockVec.subtract(thisVec);
+
 		SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(player.level(), getBlockPos());
 		if (subLevel != null) {
-			Pose3dc pose = subLevel.logicalPose();
-
-			// Извлекаем оси sublevel через два вызова transformPosition
-			// Берём любую точку в мировом пространстве — thisVec уже в мировых координатах
-			// Но transformPosition ожидает локальные — нужна другая точка отсчёта
-			Vec3 worldOrigin = pose.transformPosition(Vec3.ZERO);  // начало sublevel в мировых координатах
-			Vec3 worldAxisX  = pose.transformPosition(new Vec3(1, 0, 0)).subtract(worldOrigin);
-			Vec3 worldAxisY  = pose.transformPosition(new Vec3(0, 1, 0)).subtract(worldOrigin);
-			Vec3 worldAxisZ  = pose.transformPosition(new Vec3(0, 0, 1)).subtract(worldOrigin);
-
-			Vec3 diffVecWorld = blockVec.subtract(thisVec);
-
-			// Проецируем мировой вектор на локальные оси sublevel (R^T * v)
-			double localX = diffVecWorld.dot(worldAxisX);
-			double localY = diffVecWorld.dot(worldAxisY);
-			double localZ = diffVecWorld.dot(worldAxisZ);
-
-			blockVec = thisVec.add(localX, localY, localZ);
+			Quaterniondc orientation = subLevel.logicalPose().orientation();
+			Vector3d localDir = orientation.transformInverse(new Vector3d(diffVec.x, diffVec.y, diffVec.z));
+			diffVec = new Vec3(localDir.x, localDir.y, localDir.z);
 		}
 
-		Vec3 diffVec = blockVec.subtract(thisVec);
-		Vec3 diffVec2D = new Vec3(diffVec.x, diffVec.z, 0);
-		Vec3 rotVec = new Vec3(0, 1, 0);
-		double angle = MathHelper.angleBetween(rotVec, diffVec2D) / Math.PI * 180.0;
-
-		if (blockVec.x < thisVec.x) {
-			angle = -angle;
-		}
-
-		rotationX = (float) angle + 90;
-
-		rotVec = new Vec3(diffVec.x, 0, diffVec.z);
-		angle = MathHelper.angleBetween(diffVec, rotVec) * 180F / Math.PI;
-		if (blockVec.y < thisVec.y) {
-			angle = -angle;
-		}
-		rotationY = (float) angle;
+		rotationY = (float) Math.toDegrees(atan2(diffVec.y, diffVec.horizontalDistance()));
+		rotationX = Math.abs(rotationY) < 80f ? (float) Math.toDegrees(atan2(diffVec.z, -diffVec.x)) : 0f;
 
 		setChanged();
 		markForImmediateSync();
