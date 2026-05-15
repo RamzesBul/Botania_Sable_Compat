@@ -19,6 +19,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.fx.SparkleParticleData;
 
 import static vazkii.botania.api.BotaniaAPI.botaniaRL;
@@ -49,8 +50,8 @@ public record SparkNetIndicatorEffectPacket(int sparkId1, int sparkId2) implemen
 				return;
 			}
 
-			Vec3 orig = new Vec3(spark1.getX(), spark1.getY() + 0.25, spark1.getZ());
-			Vec3 end = new Vec3(spark2.getX(), spark2.getY() + 0.25, spark2.getZ());
+			Vec3 orig = SableCompat.transformFromSable(world, new Vec3(spark1.getX(), spark1.getY() + 0.25, spark1.getZ()));
+			Vec3 end = SableCompat.transformFromSable(world, new Vec3(spark2.getX(), spark2.getY() + 0.25, spark2.getZ()));
 			Vec3 diff = end.subtract(orig);
 			Vec3 movement = diff.normalize().scale(0.1);
 			int iters = (int) (diff.length() / movement.length());
