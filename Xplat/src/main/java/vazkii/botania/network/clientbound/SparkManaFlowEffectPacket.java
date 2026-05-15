@@ -20,6 +20,7 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.fx.WispParticleData;
 import vazkii.botania.common.helper.VecHelper;
 
@@ -54,8 +55,8 @@ public record SparkManaFlowEffectPacket(int sparkId1, int sparkId2, DyeColor net
 
 			RandomSource rng = level.getRandom();
 			double rc = 0.45;
-			Vec3 thisVec = VecHelper.fromEntityCenter(spark1).add((rng.nextDouble() - 0.5) * rc, (rng.nextDouble() - 0.5) * rc, (rng.nextDouble() - 0.5) * rc);
-			Vec3 receiverVec = VecHelper.fromEntityCenter(spark2).add((rng.nextDouble() - 0.5) * rc, (rng.nextDouble() - 0.5) * rc, (rng.nextDouble() - 0.5) * rc);
+			Vec3 thisVec = SableCompat.transformFromSable(level, VecHelper.fromEntityCenter(spark1).add((rng.nextDouble() - 0.5) * rc, (rng.nextDouble() - 0.5) * rc, (rng.nextDouble() - 0.5) * rc));
+			Vec3 receiverVec = SableCompat.transformFromSable(level, VecHelper.fromEntityCenter(spark2).add((rng.nextDouble() - 0.5) * rc, (rng.nextDouble() - 0.5) * rc, (rng.nextDouble() - 0.5) * rc));
 
 			Vec3 motion = receiverVec.subtract(thisVec).scale(0.04);
 			int color = packet.network().getTextureDiffuseColor();

@@ -117,4 +117,8 @@ dependencies {
 
     // for xplat data load condition generating
     modLocalRuntime(files("lib/forged-conditions-21.1.0.jar"))
+
+    include(modApi("dev.ryanhcode.sable-companion:sable-companion-fabric-${minecraft_version}:1.6.0"))
+
+    modCompileOnly "maven.modrinth:speedrunigt:${speedrunigt_version}+${minecraft_version}"
 }
