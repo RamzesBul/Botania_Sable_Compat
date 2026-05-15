@@ -108,6 +108,8 @@ dependencies {
 
     testImplementation "net.fabricmc:fabric-loader-junit:${fabric_loader_version}"
 
+    include(modApi("dev.ryanhcode.sable-companion:sable-companion-fabric-${minecraft_version}:1.6.0"))
+
     modCompileOnly "maven.modrinth:speedrunigt:${speedrunigt_version}+${minecraft_version}"
     //modLocalRuntime "maven.modrinth:speedrunigt:${speedrunigt_version}+${minecraft_version}"
 }

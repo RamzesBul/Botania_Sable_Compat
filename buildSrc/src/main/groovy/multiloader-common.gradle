@@ -72,6 +72,13 @@ repositories {
             includeGroup "maven.modrinth"
         }
     }
+    maven {
+        name = "RyanHCode Maven"
+        url = "https://maven.ryanhcode.dev/releases" // for sable companion
+        content {
+            includeGroup "dev.ryanhcode.sable-companion"
+        }
+    }
 }
 
 // Declare capabilities on the outgoing configurations.
