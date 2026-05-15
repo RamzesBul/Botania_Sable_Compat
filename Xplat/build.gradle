@@ -27,6 +27,8 @@ dependencies {
     compileOnly(libs.rei.neoforge) // (the -common variant would be in Intermediary mapping)
 
     compileOnly(libs.jetbrains.annotations)
+
+    api "dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:1.6.0"
 }
 
 tasks.register("normalizeLanguageFiles", JavaExec) {
