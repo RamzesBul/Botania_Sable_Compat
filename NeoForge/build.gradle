@@ -90,9 +90,15 @@ dependencies {
         runtimeOnly(files("../garden_of_glass/gardenofglass-${gog_version}.jar"))
     }
 
-    jarJar(api("dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:1.6.0"))
+    // Sable
+    api("dev.ryanhcode.sable:sable-neoforge-${project.minecraft_version}:${project.sable_version}")
 
-    runtimeOnly "maven.modrinth:create:6.0.10+mc1.21.1"
+    implementation("com.simibubi.create:create-${minecraft_version}:${create_neoforge_version}:slim") { transitive = false }
+    implementation("net.createmod.ponder:ponder-neoforge:${ponder_neoforge_version}+mc${minecraft_version}")
+    compileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_neoforge_version}")
+    implementation("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_neoforge_version}")
+    implementation("com.tterrag.registrate:Registrate:${registrate_neoforge_version}")
+
     runtimeOnly "maven.modrinth:create-aeronautics:1.2.1+mc1.21.1"
-    runtimeOnly "maven.modrinth:sable:1.2.2+mc1.21.1-neoforge"
+    runtimeOnly "maven.modrinth:touys:neoforge-1.0.5"
 }

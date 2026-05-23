@@ -22,6 +22,7 @@ import net.minecraft.world.phys.AABB;
 
 import org.jetbrains.annotations.Nullable;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.corporea.*;
 import vazkii.botania.common.BotaniaStats;
 import vazkii.botania.common.advancements.CorporeaRequestTrigger;
@@ -269,9 +270,11 @@ public class CorporeaIndexBlockEntity extends BaseCorporeaBlockEntity implements
 	}
 
 	public static void commonTick(Level level, BlockPos worldPosition, BlockState state, CorporeaIndexBlockEntity self) {
-		double x = worldPosition.getX() + 0.5;
-		double y = worldPosition.getY() + 0.5;
-		double z = worldPosition.getZ() + 0.5;
+        BlockPos worldPos = SableCompat.transformFromSable(level, worldPosition);
+
+		double x = worldPos.getX() + 0.5;
+		double y = worldPos.getY() + 0.5;
+		double z = worldPos.getZ() + 0.5;
 
 		List<Player> players = level.getEntitiesOfClass(Player.class, new AABB(x - RADIUS, y - RADIUS, z - RADIUS, x + RADIUS, y + RADIUS, z + RADIUS));
 		self.hasCloseby = false;
@@ -334,9 +337,10 @@ public class CorporeaIndexBlockEntity extends BaseCorporeaBlockEntity implements
 	}
 
 	private boolean isInRange(Player player) {
+        BlockPos pos = SableCompat.transformFromSable(level, getBlockPos());
 		return player.level().dimension() == level.dimension()
-				&& MathHelper.pointDistancePlane(getBlockPos().getX() + 0.5, getBlockPos().getZ() + 0.5, player.getX(), player.getZ()) < RADIUS
-				&& Math.abs(getBlockPos().getY() + 0.5 - player.getY()) < 5;
+				&& MathHelper.pointDistancePlane(pos.getX() + 0.5, pos.getZ() + 0.5, player.getX(), player.getZ()) < RADIUS
+				&& Math.abs(pos.getY() + 0.5 - player.getY()) < 5;
 	}
 
 	public static void addPattern(String pattern, IRegexStacker stacker) {

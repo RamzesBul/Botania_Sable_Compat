@@ -22,6 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Matrix4f;
 
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.core.handler.ClientTickHandler;
 import vazkii.botania.client.core.helper.RenderHelper;
 import vazkii.botania.common.block.block_entity.LuminizerBlockEntity;
@@ -54,7 +55,7 @@ public class LuminizerBlockEntityRenderer implements BlockEntityRenderer<Luminiz
 		float scale = 0.75F;
 		ms.scale(scale, scale, scale);
 
-		ms.mulPose(mc.getEntityRenderDispatcher().cameraOrientation());
+        ms.mulPose(SableCompat.transformCameraOrientation(mc.getEntityRenderDispatcher(), tile));
 
 		float off = 0.25F;
 		ms.translate(0F, off, 0F);

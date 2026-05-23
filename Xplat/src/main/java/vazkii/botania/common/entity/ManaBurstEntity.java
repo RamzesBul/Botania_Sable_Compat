@@ -8,10 +8,6 @@
  */
 package vazkii.botania.common.entity;
 
-import dev.ryanhcode.sable.companion.SableCompanion;
-import dev.ryanhcode.sable.companion.SubLevelAccess;
-import dev.ryanhcode.sable.companion.math.BoundingBox3d;
-import dev.ryanhcode.sable.companion.math.Pose3dc;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.Registries;
@@ -883,7 +879,7 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 		}
 
 		public boolean contentsEqual(Level world) {
-			if (isInvalidIn(world) && !SableCompanion.INSTANCE.isInPlotGrid(world, coords)) {
+			if (isInvalidIn(world)) {
 				return false;
 			}
 
