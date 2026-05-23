@@ -25,6 +25,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.core.helper.RenderHelper;
 import vazkii.botania.common.entity.SparkBaseEntity;
 import vazkii.botania.xplat.ClientXplatAbstractions;
@@ -68,7 +69,7 @@ public abstract class BaseSparkRenderer<T extends SparkBaseEntity> extends Entit
 
 		VertexConsumer buffer = buffers.getBuffer(RenderHelper.SPARK);
 		ms.pushPose();
-		ms.mulPose(entityRenderDispatcher.cameraOrientation());
+        ms.mulPose(SableCompat.transformCameraOrientation(entityRenderDispatcher, tEntity));
 		renderIcon(ms, buffer, iicon, iconColor);
 
 		ms.pushPose();

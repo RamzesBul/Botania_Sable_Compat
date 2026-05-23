@@ -72,13 +72,10 @@ repositories {
             includeGroup "maven.modrinth"
         }
     }
-    maven {
-        name = "RyanHCode Maven"
-        url = "https://maven.ryanhcode.dev/releases" // for sable companion
-        content {
-            includeGroup "dev.ryanhcode.sable-companion"
-        }
-    }
+    maven { url = "https://maven.ryanhcode.dev/releases" } // Sable
+    maven { url = "https://maven.createmod.net" } // Create, Flywheel, Ponder
+    maven { url = "https://maven.ithundxr.dev/snapshots" } // Registrate
+    maven { url = "https://maven.realrobotix.me/master" } // Registrate
 }
 
 // Declare capabilities on the outgoing configurations.
