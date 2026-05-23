@@ -19,6 +19,13 @@ dependencies {
     }
     commonJava project(path: ':Xplat', configuration: 'commonJava')
     commonResources project(path: ':Xplat', configuration: 'commonResources')
+
+    compileOnly("dev.ryanhcode.sable-companion:sable-companion-common-${project.minecraft_version}:${project.sable_companion_version}")
+
+    api ("dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:$sable_version") {
+        exclude group: "foundry.veil"
+        exclude group: "com.tterrag.registrate"
+    }
 }
 
 tasks.named('compileJava', JavaCompile) {

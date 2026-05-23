@@ -32,7 +32,7 @@ dependencies {
     // Looks weird, but actually seems to work (the -common variant would be in Intermediary mapping)
     compileOnly "me.shedaniel:RoughlyEnoughItems-neoforge:${rei_version}"
 
-    api "dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:1.6.0"
+    api "dev.ryanhcode.sable:sable-neoforge-${project.minecraft_version}:${project.sable_version}"
 
     compileOnly group: 'org.jetbrains', name: 'annotations', version: '26.0.2'
 }
