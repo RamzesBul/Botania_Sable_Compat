@@ -8,6 +8,8 @@
  */
 package vazkii.botania.common.entity;
 
+import dev.ryanhcode.sable.companion.SableCompanion;
+import dev.ryanhcode.sable.companion.SubLevelAccess;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -19,6 +21,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.Level;
 
+import org.jetbrains.annotations.Nullable;
 import vazkii.botania.api.item.SparkEntity;
 import vazkii.botania.api.mana.ManaCollisionGhost;
 
@@ -26,6 +29,8 @@ public abstract class SparkBaseEntity extends Entity implements SparkEntity, Man
 	private static final String TAG_INVIS = "invis";
 	private static final String TAG_NETWORK = "network";
 	private static final EntityDataAccessor<Integer> NETWORK = SynchedEntityData.defineId(SparkBaseEntity.class, EntityDataSerializers.INT);
+    @Nullable
+    private SubLevelAccess sublevel = null;
 
 	public SparkBaseEntity(EntityType<?> type, Level world) {
 		super(type, world);
@@ -81,4 +86,12 @@ public abstract class SparkBaseEntity extends Entity implements SparkEntity, Man
 		compound.putInt(TAG_NETWORK, getNetwork().getId());
 	}
 
+    @Nullable
+    public SubLevelAccess getSubLevel() {
+        return this.sublevel;
+    }
+
+    public void setSubLevel() {
+        this.sublevel = SableCompanion.INSTANCE.getContaining(this.level(), this.position());
+    }
 }

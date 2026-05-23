@@ -67,6 +67,7 @@
     "PollinateGoalMixin",
     "ProjectileAccessor",
     "RecipeProviderAccessor",
+    "sable.SubLevelAssemblyHelperMixin",
     "ServerLevelMixin",
     "ServerPlayerGameModeAccessor",
     "ServerPlayerGameModeMixin",
