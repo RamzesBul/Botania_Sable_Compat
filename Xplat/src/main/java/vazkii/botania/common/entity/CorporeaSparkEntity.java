@@ -34,9 +34,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.block.WandHUD;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.corporea.CorporeaNode;
 import vazkii.botania.api.corporea.CorporeaSpark;
 import vazkii.botania.client.core.helper.RenderHelper;
@@ -63,6 +65,7 @@ public class CorporeaSparkEntity extends SparkBaseEntity implements CorporeaSpar
 	private CorporeaSpark master;
 	private Set<CorporeaSpark> connections = new LinkedHashSet<>();
 	private List<CorporeaSpark> relatives = new ArrayList<>();
+    private int node_count = 1;
 	private boolean firstTick = true;
 
 	public CorporeaSparkEntity(EntityType<CorporeaSparkEntity> type, Level world) {
@@ -105,11 +108,20 @@ public class CorporeaSparkEntity extends SparkBaseEntity implements CorporeaSpar
 			}
 
 			firstTick = false;
+            this.setSubLevel();
 		}
 
 		if (master != null && (!master.entity().isAlive() || master.getNetwork() != getNetwork())) {
 			master = null;
 		}
+
+        if (this.getSubLevel() != null && node_count != getNearbySparks().size()) {
+            if (isMaster()) {
+                restartNetwork();
+            } else {
+                findNetwork();
+            }
+        }
 	}
 
 	private void dropAndKill() {
@@ -144,18 +156,22 @@ public class CorporeaSparkEntity extends SparkBaseEntity implements CorporeaSpar
 			spark.introduceNearbyTo(network, master);
 		}
 
+        node_count = getNearbySparks().size();
+
 		this.master = master;
 		this.connections = network;
 	}
 
 	@SuppressWarnings("unchecked")
 	private List<CorporeaSpark> getNearbySparks() {
-		return (List) level().getEntitiesOfClass(Entity.class, new AABB(getX() - SCAN_RANGE, getY() - SCAN_RANGE, getZ() - SCAN_RANGE, getX() + SCAN_RANGE, getY() + SCAN_RANGE, getZ() + SCAN_RANGE), Predicates.instanceOf(CorporeaSpark.class));
+        Vec3 pos = SableCompat.transformFromSable(level(), this.position());
+		return (List) level().getEntitiesOfClass(Entity.class, new AABB(pos.x() - SCAN_RANGE, pos.y() - SCAN_RANGE, pos.z() - SCAN_RANGE, pos.x() + SCAN_RANGE, pos.y() + SCAN_RANGE, pos.z() + SCAN_RANGE), Predicates.instanceOf(CorporeaSpark.class));
 	}
 
 	private void restartNetwork() {
 		connections = new LinkedHashSet<>();
 		relatives = new ArrayList<>();
+        node_count = 1;
 
 		if (master != null) {
 			CorporeaSpark oldMaster = master;
