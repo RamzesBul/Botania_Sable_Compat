@@ -4,10 +4,14 @@ import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
 import dev.ryanhcode.sable.companion.math.Pose3dc;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Quaternionf;
 
 public class SableCompat {
     public static BlockPos transformFromSable(Level level, BlockPos pos, BlockPos root) {
@@ -32,6 +36,28 @@ public class SableCompat {
 
     public static Vec3 transformFromSable(Level level, Vec3 pos) {
         return transformFromSable(level, pos, pos);
+    }
+
+    public static Quaternionf transformCameraOrientation(EntityRenderDispatcher instance, BlockEntity entity) {
+        SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(entity);
+
+        if (subLevel == null) {
+            return instance.cameraOrientation();
+        }
+
+        Quaternionf subLevelOrientation = new Quaternionf(subLevel.logicalPose().orientation());
+        return new Quaternionf(subLevelOrientation).conjugate().mul(instance.cameraOrientation());
+    }
+
+    public static Quaternionf transformCameraOrientation(EntityRenderDispatcher instance, Entity entity) {
+        SubLevelAccess subLevel = SableCompanion.INSTANCE.getContaining(entity);
+
+        if (subLevel == null) {
+            return instance.cameraOrientation();
+        }
+
+        Quaternionf subLevelOrientation = new Quaternionf(subLevel.logicalPose().orientation());
+        return new Quaternionf(subLevelOrientation).conjugate().mul(instance.cameraOrientation());
     }
 
     public static AABB transformFromSable(Level level, AABB globalRenderBox) {

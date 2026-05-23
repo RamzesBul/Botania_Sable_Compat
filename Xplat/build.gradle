@@ -28,7 +28,7 @@ dependencies {
 
     compileOnly(libs.jetbrains.annotations)
 
-    api "dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:1.6.0"
+    api "dev.ryanhcode.sable:sable-neoforge-${project.minecraft_version}:${project.sable_version}"
 }
 
 tasks.register("normalizeLanguageFiles", JavaExec) {
