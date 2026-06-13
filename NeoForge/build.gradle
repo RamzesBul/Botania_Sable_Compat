@@ -99,6 +99,6 @@ dependencies {
     implementation("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_neoforge_version}")
     implementation("com.tterrag.registrate:Registrate:${registrate_neoforge_version}")
 
-    runtimeOnly "maven.modrinth:create-aeronautics:1.2.1+mc1.21.1"
+    runtimeOnly "maven.modrinth:create-aeronautics:w7zlLnea"
     runtimeOnly "maven.modrinth:touys:neoforge-1.0.5"
 }
