@@ -35,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
 import vazkii.botania.api.block.Bound;
 import vazkii.botania.api.block.PhantomInkableBlock;
 import vazkii.botania.api.block.WandBindable;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.fx.WispParticleData;
 import vazkii.botania.common.block.LuminizerBlock;
 import vazkii.botania.common.entity.LuminizerMoverEntity;
@@ -88,13 +89,14 @@ public class LuminizerBlockEntity extends BlockEntity implements WandBindable, B
 		if (!self.isNoParticle() && nextDest != null && nextDest.getY() != Integer.MIN_VALUE && self.isValidBinding()) {
 			Vec3 vec = self.getMovementVector();
 			if (vec != null) {
+				Vec3 lineStart = SableCompat.transformFromSable(level, Vec3.atCenterOf(worldPosition));
 				double dist = 0.1;
 				int size = (int) (vec.length() / dist);
 				int count = 10;
 				int start = self.ticksElapsed % size;
 
 				Vec3 vecMag = vec.normalize().scale(dist);
-				Vec3 vecTip = vecMag.scale(start).add(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5);
+				Vec3 vecTip = vecMag.scale(start).add(lineStart);
 
 				double radPer = Math.PI / 16.0;
 				float mul = 0.5F;
@@ -189,7 +191,9 @@ public class LuminizerBlockEntity extends BlockEntity implements WandBindable, B
 			return null;
 		}
 
-		return new Vec3(dest.getX() - worldPosition.getX(), dest.getY() - worldPosition.getY(), dest.getZ() - worldPosition.getZ());
+		Vec3 start = SableCompat.transformFromSable(level, Vec3.atCenterOf(worldPosition));
+		Vec3 end = SableCompat.transformFromSable(level, Vec3.atCenterOf(dest));
+		return end.subtract(start);
 	}
 
 	@Nullable
@@ -206,8 +210,11 @@ public class LuminizerBlockEntity extends BlockEntity implements WandBindable, B
 
 	@Override
 	public boolean bindTo(Player player, ItemStack wand, BlockPos pos, Direction side) {
+        BlockPos realPos = SableCompat.transformFromSable(player.level(), pos);
+        BlockPos realBlockPos = SableCompat.transformFromSable(player.level(), getBlockPos());
+
 		if (!(player.level().getBlockState(pos).getBlock() instanceof LuminizerBlock)
-				|| pos.distSqr(getBlockPos()) > MAX_DIST * MAX_DIST) {
+				|| realPos.distSqr(realBlockPos) > MAX_DIST * MAX_DIST) {
 			return false;
 		}
 
