@@ -22,5 +22,5 @@ plugins {
 
 rootProject.name = 'Botania'
 include('Xplat')
-include('Fabric')
+//include('Fabric')
 include('NeoForge')
