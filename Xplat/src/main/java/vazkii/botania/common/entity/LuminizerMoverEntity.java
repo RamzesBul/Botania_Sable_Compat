@@ -30,6 +30,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import vazkii.botania.api.block.Bound;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.fx.SparkleParticleData;
 import vazkii.botania.common.annotations.SoftImplement;
 import vazkii.botania.common.block.LuminizerBlock;
@@ -42,6 +43,8 @@ public class LuminizerMoverEntity extends Entity {
 	private static final String TAG_EXIT_Z = "exitZ";
 	private static final EntityDataAccessor<BlockPos> EXIT_POS = SynchedEntityData.defineId(LuminizerMoverEntity.class, EntityDataSerializers.BLOCK_POS);
 
+    private BlockPos realExitPos;
+
 	public LuminizerMoverEntity(EntityType<LuminizerMoverEntity> type, Level world) {
 		super(type, world);
 		noPhysics = true;
@@ -49,8 +52,14 @@ public class LuminizerMoverEntity extends Entity {
 
 	public LuminizerMoverEntity(Level world, BlockPos pos, BlockPos exitPos) {
 		this(BotaniaEntities.LUMINIZER_BEAM, world);
-		setPos(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-		setExit(exitPos);
+
+        BlockPos subPos = SableCompat.transformFromSable(world, pos);
+        BlockPos subExitPos = SableCompat.transformFromSable(world, exitPos);
+
+        realExitPos = exitPos;
+
+		setPos(subPos.getX() + 0.5, subPos.getY() + 0.5, subPos.getZ() + 0.5);
+		setExit(subExitPos);
 	}
 
 	@Override
@@ -80,15 +89,16 @@ public class LuminizerMoverEntity extends Entity {
 
 		if (!level().isClientSide() && pos.equals(exitPos)) {
 			boolean done = true;
-			if (level().getBlockEntity(pos) instanceof LuminizerBlockEntity relay) {
-				BlockState state = level().getBlockState(pos);
+			if (realExitPos != null && level().getBlockEntity(realExitPos) instanceof LuminizerBlockEntity relay) {
+				BlockState state = level().getBlockState(realExitPos);
 				if (state.getBlock() instanceof LuminizerBlock luminizer) {
-					luminizer.onMoverPassing(level(), state, pos, this);
+					luminizer.onMoverPassing(level(), state, realExitPos, this);
 				}
 
 				BlockPos bind = relay.getNextDestination();
 				if (bind != null && relay.isValidBinding()) {
-					setExit(bind);
+					realExitPos = bind;
+					setExit(SableCompat.transformFromSable(level(), bind));
 					done = false;
 				}
 			}
