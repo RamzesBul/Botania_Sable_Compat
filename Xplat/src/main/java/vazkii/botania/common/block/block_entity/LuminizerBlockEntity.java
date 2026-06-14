@@ -205,7 +205,18 @@ public class LuminizerBlockEntity extends BlockEntity implements WandBindable, B
 	@Nullable
 	public BlockPos getNextDestination() {
 		BlockState state = getBlockState();
-		return state.getBlock() instanceof LuminizerBlock luminizer ? luminizer.getNextDestination(level, state, getBlockPos(), this) : null;
+        BlockPos dest = state.getBlock() instanceof LuminizerBlock luminizer ? luminizer.getNextDestination(level, state, getBlockPos(), this) : null;
+
+        if (dest != null) {
+            BlockPos subDest = SableCompat.transformFromSable(level, dest);
+            BlockPos subWorldPosition = SableCompat.transformFromSable(level, worldPosition);
+
+            if (subWorldPosition.distSqr(subDest) > MAX_DIST * MAX_DIST) {
+                return null;
+            }
+        }
+
+		return dest;
 	}
 
 	@Override
