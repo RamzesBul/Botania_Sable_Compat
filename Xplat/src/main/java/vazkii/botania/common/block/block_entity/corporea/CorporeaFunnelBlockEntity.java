@@ -8,6 +8,8 @@
  */
 package vazkii.botania.common.block.block_entity.corporea;
 
+import dev.ryanhcode.sable.companion.SableCompanion;
+import dev.ryanhcode.sable.companion.SubLevelAccess;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.random.WeightedRandomList;
@@ -16,6 +18,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.corporea.CorporeaHelper;
@@ -76,17 +79,24 @@ public class CorporeaFunnelBlockEntity extends BaseCorporeaBlockEntity implement
 
 	@Nullable
 	private BlockPos getInvPos() {
-		BlockPos downOne = worldPosition.below();
-		if (XplatAbstractions.INSTANCE.hasInventory(level, downOne, Direction.UP)) {
-			return downOne;
-		}
+        SubLevelAccess funnelSubLevel = SableCompanion.INSTANCE.getContaining(level, worldPosition);
 
-		BlockPos downTwo = worldPosition.below(2);
-		if (XplatAbstractions.INSTANCE.hasInventory(level, downTwo, Direction.UP)) {
-			return downTwo;
-		}
+        for (int offset = 1; offset <= 2; offset++) {
+            BlockPos localBelow = worldPosition.below(offset);
+            BlockPos invPos = SableCompanion.INSTANCE.runIncludingSubLevels(
+                    level,
+                    Vec3.atCenterOf(localBelow),
+                    true,
+                    funnelSubLevel,
+                    (subLevel, pos) -> XplatAbstractions.INSTANCE.hasInventory(level, pos, Direction.UP) ? pos : null
+            );
 
-		return null;
+            if (invPos != null) {
+                return invPos;
+            }
+        }
+
+        return null;
 	}
 
 }
