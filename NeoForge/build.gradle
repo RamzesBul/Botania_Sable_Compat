@@ -98,5 +98,5 @@ dependencies {
     implementation("com.tterrag.registrate:Registrate:${registrate_neoforge_version}")
 
     runtimeOnly "maven.modrinth:create-aeronautics:w7zlLnea"
-    runtimeOnly "maven.modrinth:touys:neoforge-1.0.5"
+    runtimeOnly "maven.modrinth:touys:q1gpE9y4"
 }
