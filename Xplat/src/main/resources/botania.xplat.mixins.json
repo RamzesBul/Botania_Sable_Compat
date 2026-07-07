@@ -68,6 +68,7 @@
     "ProjectileAccessor",
     "RecipeProviderAccessor",
     "sable.SubLevelAssemblyHelperMixin",
+    "sable.SubLevelEntityCollisionMixin",
     "ServerLevelMixin",
     "ServerPlayerGameModeAccessor",
     "ServerPlayerGameModeMixin",

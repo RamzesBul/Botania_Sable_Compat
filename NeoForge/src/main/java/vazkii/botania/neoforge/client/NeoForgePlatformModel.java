@@ -38,51 +38,60 @@ public class NeoForgePlatformModel extends BakedModelWrapper<BakedModel> {
 		super(originalModel);
 	}
 
-	@Override
-	public ModelData getModelData(BlockAndTintGetter world, BlockPos pos, BlockState state, ModelData tileData) {
-		if (world.getBlockEntity(pos) instanceof PlatformBlockEntity platform) {
-			return ModelData.builder()
-					.with(PROPERTY, new PlatformBlockEntity.PlatformData(platform))
-					.build();
-		}
-		return tileData;
-	}
+    @Override
+    public ModelData getModelData(BlockAndTintGetter world, BlockPos pos, BlockState state, ModelData tileData) {
+        if (world.getBlockEntity(pos) instanceof PlatformBlockEntity platform) {
+            return ModelData.builder()
+                    .with(PROPERTY, new PlatformBlockEntity.PlatformData(platform))
+                    .build();
+        }
+        return tileData;
+    }
 
-	@Override
-	public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side,
-			RandomSource rand, ModelData extraData, @Nullable RenderType renderType) {
-		var data = extraData.get(PROPERTY);
-		if (state == null || !(state.getBlock() instanceof PlatformBlock) || data == null) {
-			return Minecraft.getInstance().getBlockRenderer().getBlockModelShaper()
-					.getModelManager().getMissingModel().getQuads(state, side, rand, extraData, renderType);
-		}
+    @Override
+    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction side,
+                                    RandomSource rand, ModelData extraData, @Nullable RenderType renderType) {
+        var data = extraData.get(PROPERTY);
+        if (state == null || !(state.getBlock() instanceof PlatformBlock)) {
+            return Minecraft.getInstance().getBlockRenderer().getBlockModelShaper()
+                    .getModelManager().getMissingModel().getQuads(state, side, rand, extraData, renderType);
+        }
+        if (data == null) {
+            // No model data delivered (e.g. Sable's single-block sub-level render path before the
+            // block entity's model data has been cached). Render the base platform model rather than
+            // the missing-texture model.
+            return super.getQuads(state, side, rand, extraData, renderType);
+        }
 
-		BlockState heldState = data.state();
+        BlockState heldState = data.state();
 
-		if (heldState == null || heldState.is(BotaniaTags.Blocks.UNSUPPORTED_PLATFORM_DISGUISE)) {
-			// No camo
-			return super.getQuads(state, side, rand, extraData, renderType);
-		} else {
-			BakedModel model = Minecraft.getInstance().getBlockRenderer()
-					.getBlockModelShaper().getBlockModel(heldState);
-			return model.getQuads(heldState, side, rand, ModelData.EMPTY, renderType);
-		}
-	}
+        if (heldState == null || heldState.is(BotaniaTags.Blocks.UNSUPPORTED_PLATFORM_DISGUISE)) {
+            // No camo
+            return super.getQuads(state, side, rand, extraData, renderType);
+        } else {
+            BakedModel model = Minecraft.getInstance().getBlockRenderer()
+                    .getBlockModelShaper().getBlockModel(heldState);
+            return model.getQuads(heldState, side, rand, ModelData.EMPTY, renderType);
+        }
+    }
 
-	@Override
-	public ChunkRenderTypeSet getRenderTypes(BlockState state, RandomSource rand, ModelData extraData) {
-		var data = extraData.get(PROPERTY);
-		if (!(state.getBlock() instanceof PlatformBlock) || data == null) {
-			return Minecraft.getInstance().getBlockRenderer().getBlockModelShaper()
-					.getModelManager().getMissingModel().getRenderTypes(state, rand, extraData);
-		}
+    @Override
+    public ChunkRenderTypeSet getRenderTypes(BlockState state, RandomSource rand, ModelData extraData) {
+        var data = extraData.get(PROPERTY);
+        if (!(state.getBlock() instanceof PlatformBlock)) {
+            return Minecraft.getInstance().getBlockRenderer().getBlockModelShaper()
+                    .getModelManager().getMissingModel().getRenderTypes(state, rand, extraData);
+        }
+        if (data == null) {
+            return super.getRenderTypes(state, rand, extraData);
+        }
 
-		BlockState heldState = data.state();
-		if (heldState == null) {
-			return super.getRenderTypes(state, rand, extraData);
-		} else {
-			BakedModel model = Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getBlockModel(heldState);
-			return model.getRenderTypes(heldState, rand, ModelData.EMPTY);
-		}
-	}
+        BlockState heldState = data.state();
+        if (heldState == null) {
+            return super.getRenderTypes(state, rand, extraData);
+        } else {
+            BakedModel model = Minecraft.getInstance().getBlockRenderer().getBlockModelShaper().getBlockModel(heldState);
+            return model.getRenderTypes(heldState, rand, ModelData.EMPTY);
+        }
+    }
 }

@@ -12,7 +12,9 @@
     "WorldPresetNeoForgeAccessor"
   ],
   "client": [
-    "client.ParticleEngineNeoForgeMixin"
+    "client.ParticleEngineNeoForgeMixin",
+    "client.PlatformBlockEntityNeoForgeMixin",
+    "client.SingleBlockSubLevelWrapperMixin"
   ],
   "server": [],
   "injectors": {
