@@ -1,5 +1,8 @@
 package vazkii.botania.api.compat.Sable;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+
+import dev.ryanhcode.sable.companion.ClientSubLevelAccess;
 import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
@@ -66,6 +69,32 @@ public class SableCompat {
 
         Quaternionf subLevelOrientation = new Quaternionf(subLevel.logicalPose().orientation());
         return new Quaternionf(subLevelOrientation).conjugate().mul(instance.cameraOrientation());
+    }
+
+    /**
+     * Positions the given {@link PoseStack} at the sub-level block {@code pos}, applying the exact
+     * render pose (interpolated with the current frame's partial-tick) that Sable uses to render the
+     * sub-level's blocks. After this call, geometry defined in the block's local 0..1 coordinates
+     * (e.g. a {@link net.minecraft.world.phys.shapes.VoxelShape}) renders locked to the moving
+     * sub-level block, with no offset or jitter.
+     *
+     * <p>Mirrors Sable's own block-decal rendering: origin at {@code renderPose.transformPosition(pos)}
+     * followed by the render orientation.
+     *
+     * @return true if {@code pos} belongs to a (client) sub-level and the pose was applied, false
+     *         otherwise (in which case the caller should apply the regular camera-relative translation).
+     */
+    public static boolean applySubLevelPose(PoseStack ms, Level level, BlockPos pos, Vec3 cameraPos) {
+        SubLevelAccess subLevelAccess = SableCompanion.INSTANCE.getContaining(level, pos);
+        if (!(subLevelAccess instanceof ClientSubLevelAccess clientSubLevel)) {
+            return false;
+        }
+        Pose3dc renderPose = clientSubLevel.renderPose();
+        Vec3 projectedPos = renderPose.transformPosition(new Vec3(pos.getX(), pos.getY(), pos.getZ()));
+
+        ms.translate(projectedPos.x - cameraPos.x, projectedPos.y - cameraPos.y, projectedPos.z - cameraPos.z);
+        ms.mulPose(new Quaternionf(renderPose.orientation()));
+        return true;
     }
 
     public static AABB transformFromSable(Level level, AABB globalRenderBox) {
