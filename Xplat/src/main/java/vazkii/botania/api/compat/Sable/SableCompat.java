@@ -14,6 +14,14 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 
 public class SableCompat {
+    /**
+     * @return true if the given position belongs to a Sable sub-level (i.e. it is stored in the plot
+     *         grid), false when it is a regular block in the world or when Sable is not installed.
+     */
+    public static boolean isOnSubLevel(Level level, BlockPos pos) {
+        return SableCompanion.INSTANCE.getContaining(level, pos) != null;
+    }
+
     public static BlockPos transformFromSable(Level level, BlockPos pos, BlockPos root) {
         SubLevelAccess subLevelAccess = SableCompanion.INSTANCE.getContaining(level, root);
         if (subLevelAccess == null)
