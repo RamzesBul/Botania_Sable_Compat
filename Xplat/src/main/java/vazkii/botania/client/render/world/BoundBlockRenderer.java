@@ -28,6 +28,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import vazkii.botania.api.BotaniaAPI;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.item.CoordBoundItem;
 import vazkii.botania.api.item.WireframeCoordinateListProvider;
 import vazkii.botania.client.core.handler.ClientTickHandler;
@@ -122,7 +123,9 @@ public final class BoundBlockRenderer {
 			double renderPosZ = camera.getPosition().z();
 
 			ms.pushPose();
-			ms.translate(pos.getX() - renderPosX, pos.getY() - renderPosY, pos.getZ() - renderPosZ);
+			if (!SableCompat.applySubLevelPose(ms, level, pos, camera.getPosition())) {
+				ms.translate(pos.getX() - renderPosX, pos.getY() - renderPosY, pos.getZ() - renderPosZ);
+			}
 
 			VertexConsumer buffer = buffers.getBuffer(thick ? RenderHelper.LINE_5_NO_DEPTH : RenderHelper.LINE_1_NO_DEPTH);
 			renderBlockOutline(ms, buffer, shape, color);
