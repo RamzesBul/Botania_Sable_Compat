@@ -47,8 +47,8 @@ import vazkii.botania.client.core.helper.RenderHelper;
 import vazkii.botania.common.item.BotaniaItems;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
 /**
@@ -61,6 +61,9 @@ import java.util.function.Predicate;
 public abstract class BindableSpecialFlowerBlockEntity<T> extends SpecialFlowerBlockEntity implements WandBindable, Bound {
 	private static final String TAG_BINDING = "binding";
 	private static final String TAG_AUTO_BINDING = "autoBinding";
+
+	// How often (in ticks) an unbound flower re-attempts binding in a Sable sub-level context (Phase 3).
+	private static final int REBIND_INTERVAL = 20;
 
 	/**
 	 * Superclass (or interface) of all BlockEntities that this flower is able to bind to.
@@ -106,10 +109,21 @@ public abstract class BindableSpecialFlowerBlockEntity<T> extends SpecialFlowerB
 	@Nullable
 	public static BlockPos getClosestMatchingBlockEntity(Level level, BlockPos center,
 			int rangeLimit, Predicate<BlockEntity> blockEntityPredicate) {
-		double minDist = Double.MAX_VALUE;
 		double limitSquared = (double) rangeLimit * rangeLimit;
-		BlockPos closestPos = null;
+		// Mutable trackers shared by the local and cross-sub-level scans (accessed from the lambda below).
+		double[] minDist = { Double.MAX_VALUE };
+		BlockPos[] closestPos = { null };
 
+		BiConsumer<BlockPos, BlockEntity> evaluate = (pos, be) -> {
+			// Sable-aware distance: candidate and center may sit on different levels/sub-levels.
+			double dist = SableCompat.distanceSqr(level, center, pos);
+			if (dist <= minDist[0] && dist <= limitSquared && blockEntityPredicate.test(be)) {
+				minDist[0] = dist;
+				closestPos[0] = pos.immutable();
+			}
+		};
+
+		// 1) Local scan in the center's own coordinate space (same world, or the same sub-level plot).
 		// POIs might be an even more efficient option for this, but there can only be one POI type per block state
 		List<ChunkPos> chunkPosList = ChunkPos.rangeClosed(
 				new ChunkPos(center.offset(-rangeLimit, 0, -rangeLimit)),
@@ -119,22 +133,21 @@ public abstract class BindableSpecialFlowerBlockEntity<T> extends SpecialFlowerB
 		for (ChunkPos chunkPos : chunkPosList) {
 			LevelChunk chunk = level.getChunkSource().getChunkNow(chunkPos.x, chunkPos.z);
 			if (chunk != null) {
-				for (Map.Entry<BlockPos, BlockEntity> entry : chunk.getBlockEntities().entrySet()) {
-					BlockPos pos = entry.getKey();
-					// Sable-aware distance: candidate and center may sit on different sub-levels.
-					double dist = SableCompat.distanceSqr(level, center, pos);
-					if (dist > minDist || dist > limitSquared) {
-						continue;
-					}
-					if (blockEntityPredicate.test(entry.getValue())) {
-						minDist = dist;
-						closestPos = pos;
-					}
-				}
+				chunk.getBlockEntities().forEach(evaluate);
 			}
 		}
 
-		return closestPos;
+		// 2) Cross-level scan: block-entities of nearby sub-levels, plus (when the center itself is on a
+		// sub-level) the surrounding world. Handles every mixed global/sub-level combination in world
+		// space; all three helper calls are no-ops when Sable is absent. Double-visiting a candidate is
+		// harmless since evaluation is idempotent.
+		Vec3 worldCenter = SableCompat.transformFromSable(level, Vec3.atCenterOf(center));
+		SableCompat.forEachBlockEntityInNearbySubLevels(level, worldCenter, rangeLimit, evaluate);
+		if (SableCompat.isOnSubLevel(level, center)) {
+			SableCompat.forEachWorldBlockEntityNear(level, worldCenter, rangeLimit, evaluate);
+		}
+
+		return closestPos[0];
 	}
 
 	@Override
@@ -149,6 +162,16 @@ public abstract class BindableSpecialFlowerBlockEntity<T> extends SpecialFlowerB
 				&& level.isLoaded(bindingPos) && findBindCandidateAt(bindingPos) != null
 				&& SableCompat.distanceSqr(level, getBlockPos(), bindingPos) > (double) getBindingRadius() * getBindingRadius()) {
 			setBindingPos(null);
+		}
+
+		// Phase 3: sub-levels move around, so a flower that lost its binding (drifted out of range above,
+		// or never found one) should be able to re-acquire the nearest target as sub-levels drift back
+		// into range. Periodically re-attempt auto-binding while unbound. Gated to Sable contexts and a
+		// tick interval so regular-world flowers behave exactly as before. Mirrors the Spark network
+		// re-linking approach.
+		if (!level.isClientSide() && bindingPos == null && level.getGameTime() % REBIND_INTERVAL == 0
+				&& SableCompat.hasSubLevelContext(level, getBlockPos(), getBindingRadius())) {
+			setBindingPos(findClosestTarget());
 		}
 
 		//First time the flower has been placed. This is the best time to check it; /setblock and friends don't call
