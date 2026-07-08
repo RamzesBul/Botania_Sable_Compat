@@ -9,6 +9,7 @@ import dev.ryanhcode.sable.companion.math.BoundingBox3d;
 import dev.ryanhcode.sable.companion.math.Pose3dc;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -23,6 +24,18 @@ public class SableCompat {
      */
     public static boolean isOnSubLevel(Level level, BlockPos pos) {
         return SableCompanion.INSTANCE.getContaining(level, pos) != null;
+    }
+
+    /**
+     * Squared distance between two block positions, accounting for Sable sub-level poses: each point
+     * is translated into world space via the pose of the sub-level containing it (or left as-is when
+     * it is a regular world block / Sable is absent). Use this instead of a raw coordinate distance
+     * whenever the two positions may live on different levels/sub-levels (e.g. flower <-> spreader
+     * binding), since sub-level blocks are stored in plot-grid coordinates unrelated to world space.
+     */
+    public static double distanceSqr(Level level, Vec3i a, Vec3i b) {
+        return SableCompanion.INSTANCE.distanceSquaredWithSubLevels(level,
+                a.getX(), a.getY(), a.getZ(), b.getX(), b.getY(), b.getZ());
     }
 
     public static BlockPos transformFromSable(Level level, BlockPos pos, BlockPos root) {
