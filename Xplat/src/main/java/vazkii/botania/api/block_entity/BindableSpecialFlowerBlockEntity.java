@@ -39,11 +39,11 @@ import org.jetbrains.annotations.Nullable;
 import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.BotaniaAPIClient;
 import vazkii.botania.api.block.Bound;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.block.WandBindable;
 import vazkii.botania.api.block.WandHUD;
 import vazkii.botania.api.mana.ManaReceiver;
 import vazkii.botania.client.core.helper.RenderHelper;
-import vazkii.botania.common.helper.MathHelper;
 import vazkii.botania.common.item.BotaniaItems;
 
 import java.util.List;
@@ -106,8 +106,8 @@ public abstract class BindableSpecialFlowerBlockEntity<T> extends SpecialFlowerB
 	@Nullable
 	public static BlockPos getClosestMatchingBlockEntity(Level level, BlockPos center,
 			int rangeLimit, Predicate<BlockEntity> blockEntityPredicate) {
-		long minDist = Long.MAX_VALUE;
-		long limitSquared = (long) rangeLimit * rangeLimit;
+		double minDist = Double.MAX_VALUE;
+		double limitSquared = (double) rangeLimit * rangeLimit;
 		BlockPos closestPos = null;
 
 		// POIs might be an even more efficient option for this, but there can only be one POI type per block state
@@ -121,7 +121,8 @@ public abstract class BindableSpecialFlowerBlockEntity<T> extends SpecialFlowerB
 			if (chunk != null) {
 				for (Map.Entry<BlockPos, BlockEntity> entry : chunk.getBlockEntities().entrySet()) {
 					BlockPos pos = entry.getKey();
-					long dist = MathHelper.distSqr(center, pos);
+					// Sable-aware distance: candidate and center may sit on different sub-levels.
+					double dist = SableCompat.distanceSqr(level, center, pos);
 					if (dist > minDist || dist > limitSquared) {
 						continue;
 					}
@@ -139,6 +140,16 @@ public abstract class BindableSpecialFlowerBlockEntity<T> extends SpecialFlowerB
 	@Override
 	protected void tickFlower() {
 		super.tickFlower();
+
+		// A bound Sable sub-level can drift away in world space (its logical binding pos stays valid,
+		// but the target may leave the link range). Re-validate each tick and drop the binding once the
+		// still-loaded, still-present target is out of range. Bindings within the same sub-level keep a
+		// constant world distance (both endpoints share the same pose), so they are never dropped here.
+		if (!level.isClientSide() && bindingPos != null
+				&& level.isLoaded(bindingPos) && findBindCandidateAt(bindingPos) != null
+				&& SableCompat.distanceSqr(level, getBlockPos(), bindingPos) > (double) getBindingRadius() * getBindingRadius()) {
+			setBindingPos(null);
+		}
 
 		//First time the flower has been placed. This is the best time to check it; /setblock and friends don't call
 		//the typical setPlacedBy method that player-placements do.
@@ -218,7 +229,10 @@ public abstract class BindableSpecialFlowerBlockEntity<T> extends SpecialFlowerB
 	}
 
 	public boolean wouldBeValidBinding(@Nullable BlockPos pos) {
-		if (level == null || pos == null || !level.isLoaded(pos) || MathHelper.distSqr(getBlockPos(), pos) > (long) getBindingRadius() * getBindingRadius()) {
+		// Sable-aware distance so binding works across levels/sub-levels (flower and target may live
+		// in different coordinate spaces); a raw coordinate distance would be meaningless there.
+		if (level == null || pos == null || !level.isLoaded(pos)
+				|| SableCompat.distanceSqr(level, getBlockPos(), pos) > (double) getBindingRadius() * getBindingRadius()) {
 			return false;
 		} else {
 			return findBindCandidateAt(pos) != null;
