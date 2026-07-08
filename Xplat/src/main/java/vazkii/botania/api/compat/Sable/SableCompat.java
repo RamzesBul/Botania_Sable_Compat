@@ -7,15 +7,22 @@ import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
 import dev.ryanhcode.sable.companion.math.Pose3dc;
+import dev.ryanhcode.sable.sublevel.SubLevel;
+import dev.ryanhcode.sable.sublevel.plot.LevelPlot;
+import dev.ryanhcode.sable.sublevel.plot.PlotChunkHolder;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
+
+import java.util.function.BiConsumer;
 
 public class SableCompat {
     /**
@@ -36,6 +43,77 @@ public class SableCompat {
     public static double distanceSqr(Level level, Vec3i a, Vec3i b) {
         return SableCompanion.INSTANCE.distanceSquaredWithSubLevels(level,
                 a.getX(), a.getY(), a.getZ(), b.getX(), b.getY(), b.getZ());
+    }
+
+    /**
+     * Feeds every loaded block-entity of sub-levels whose world bounds are within {@code radius} blocks
+     * of {@code worldCenter} (a world-space point) to {@code consumer}. Block-entities living on a
+     * sub-level are stored in plot-grid coordinates far from world space, so a normal world-space chunk
+     * scan cannot see them; this walks the plot chunks of each nearby sub-level instead.
+     *
+     * <p>No-op when Sable is absent ({@code getAllIntersecting} returns an empty iterable). Used to make
+     * flower&lt;-&gt;target auto-binding work across levels/sub-levels.
+     */
+    public static void forEachBlockEntityInNearbySubLevels(Level level, Vec3 worldCenter, double radius,
+            BiConsumer<BlockPos, BlockEntity> consumer) {
+        BoundingBox3d bounds = new BoundingBox3d(
+                worldCenter.x - radius, worldCenter.y - radius, worldCenter.z - radius,
+                worldCenter.x + radius, worldCenter.y + radius, worldCenter.z + radius);
+        for (SubLevelAccess access : SableCompanion.INSTANCE.getAllIntersecting(level, bounds)) {
+            // Only the main SubLevel implementation exposes the plot with its stored block-entities.
+            if (!(access instanceof SubLevel sub)) {
+                continue;
+            }
+            LevelPlot plot = sub.getPlot();
+            for (PlotChunkHolder holder : plot.getLoadedChunks()) {
+                LevelChunk chunk = holder.getChunk();
+                if (chunk != null) {
+                    chunk.getBlockEntities().forEach(consumer);
+                }
+            }
+        }
+    }
+
+    /**
+     * Feeds every loaded block-entity of the regular world (excluding plot-grid chunks, which belong to
+     * sub-levels) within {@code radius} blocks of {@code worldCenter} to {@code consumer}. Lets a flower
+     * that itself sits on a sub-level discover targets in the surrounding world.
+     */
+    public static void forEachWorldBlockEntityNear(Level level, Vec3 worldCenter, double radius,
+            BiConsumer<BlockPos, BlockEntity> consumer) {
+        int r = Mth.ceil(radius);
+        int minChunkX = Mth.floor(worldCenter.x - r) >> 4;
+        int maxChunkX = Mth.floor(worldCenter.x + r) >> 4;
+        int minChunkZ = Mth.floor(worldCenter.z - r) >> 4;
+        int maxChunkZ = Mth.floor(worldCenter.z + r) >> 4;
+        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                // Sub-level (plot-grid) chunks are handled by forEachBlockEntityInNearbySubLevels.
+                if (SableCompanion.INSTANCE.isInPlotGrid(level, cx, cz)) {
+                    continue;
+                }
+                LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
+                if (chunk != null) {
+                    chunk.getBlockEntities().forEach(consumer);
+                }
+            }
+        }
+    }
+
+    /**
+     * @return true if the given position is on a sub-level, or any sub-level is within {@code radius}
+     *         blocks of its world position. Used to gate the periodic re-binding of flowers to Sable
+     *         contexts, so regular-world behavior is left unchanged.
+     */
+    public static boolean hasSubLevelContext(Level level, BlockPos pos, double radius) {
+        if (isOnSubLevel(level, pos)) {
+            return true;
+        }
+        Vec3 worldCenter = transformFromSable(level, Vec3.atCenterOf(pos));
+        BoundingBox3d bounds = new BoundingBox3d(
+                worldCenter.x - radius, worldCenter.y - radius, worldCenter.z - radius,
+                worldCenter.x + radius, worldCenter.y + radius, worldCenter.z + radius);
+        return SableCompanion.INSTANCE.getAllIntersecting(level, bounds).iterator().hasNext();
     }
 
     public static BlockPos transformFromSable(Level level, BlockPos pos, BlockPos root) {
