@@ -867,6 +867,10 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 
 	public record PositionProperties(BlockPos coords, BlockState state) {
 		public static PositionProperties fromEntity(Entity entity) {
+			// coords are intentionally in world space (transformed): on a Sable sub-level this makes
+			// contentsEqual() differ from the logical getBlockStateOn() state, which keeps the spreader
+			// re-simulating its burst every tick. That constant re-scan is what lets a sub-level spreader
+			// keep (re)acquiring a receiver across the sub-level boundary / on another level.
 			return new PositionProperties(SableCompat.transformFromSable(entity.level(), entity.blockPosition()), entity.getBlockStateOn());
 		}
 
