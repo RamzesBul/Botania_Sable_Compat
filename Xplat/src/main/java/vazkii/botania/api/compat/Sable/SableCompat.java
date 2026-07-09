@@ -6,6 +6,7 @@ import dev.ryanhcode.sable.companion.ClientSubLevelAccess;
 import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
+import dev.ryanhcode.sable.companion.math.BoundingBox3ic;
 import dev.ryanhcode.sable.companion.math.Pose3dc;
 import dev.ryanhcode.sable.sublevel.SubLevel;
 import dev.ryanhcode.sable.sublevel.plot.LevelPlot;
@@ -20,7 +21,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
+import org.joml.Vector3d;
 
 import java.util.function.BiConsumer;
 
@@ -114,6 +117,51 @@ public class SableCompat {
                 worldCenter.x - radius, worldCenter.y - radius, worldCenter.z - radius,
                 worldCenter.x + radius, worldCenter.y + radius, worldCenter.z + radius);
         return SableCompanion.INSTANCE.getAllIntersecting(level, bounds).iterator().hasNext();
+    }
+
+    /**
+     * Decides whether a burst that is still travelling in the local space of the sub-level containing
+     * {@code sourcePos} has now left that sub-level's world bounds, and if so returns the world-space
+     * position and velocity to continue with.
+     *
+     * <p>A real burst starts life on the sub-level (logical coords) so it moves together with the
+     * (possibly moving) sub-level and can hit pools on it. Once it leaves the sub-level's bounds it would
+     * otherwise freeze in unloaded plot chunks, so we project it into world space to finish its flight.
+     *
+     * @return {@code [worldPosition, worldVelocity]} when the burst should be projected out, or
+     *         {@code null} when it is still over the sub-level (or {@code sourcePos} is not on a sub-level).
+     */
+    /**
+     * Recomputes the world bounding box of the sub-level containing {@code pos} from its current pose.
+     * Sable's raycast override finds the sub-levels a ray crosses via {@code getAllIntersecting}, which
+     * tests each sub-level's cached world bounding box. On a fast-moving sub-level that box can lag the
+     * current pose by a tick, so a burst-scan raycast started mid-tick (e.g. the spreader's receiver check)
+     * fails to find the sub-level and misses the pool. Refreshing the box right before the scan avoids that.
+     */
+    public static void refreshSubLevelBounds(Level level, BlockPos pos) {
+        if (SableCompanion.INSTANCE.getContaining(level, pos) instanceof SubLevel subLevel) {
+            subLevel.updateBoundingBox();
+        }
+    }
+
+    @Nullable
+    public static Vec3[] projectBurstOutOfSubLevel(Level level, BlockPos sourcePos, Vec3 localPos, Vec3 localVel) {
+        if (!(SableCompanion.INSTANCE.getContaining(level, sourcePos) instanceof SubLevel subLevel)) {
+            return null;
+        }
+        // Compare the burst's own (logical/plot-grid) position to the plot's logical bounds. Both are
+        // independent of the sub-level's pose, so a fast-moving sub-level cannot desync the check.
+        // Comparing the world position to the world bounding box could: they are recomputed from the pose
+        // each tick, and a one-tick pose lag on a fast sub-level pushes the point out of the box, projecting
+        // the burst before it reached the pool.
+        BoundingBox3ic plotBounds = subLevel.getPlot().getBoundingBox();
+        if (plotBounds == null || plotBounds.contains(new Vector3d(localPos.x, localPos.y, localPos.z))) {
+            return null; // still inside the sub-level (or bounds unknown: stay local)
+        }
+        Pose3dc pose = subLevel.logicalPose();
+        Vec3 worldPos = pose.transformPosition(localPos);
+        Vector3d worldVel = pose.orientation().transform(new Vector3d(localVel.x, localVel.y, localVel.z));
+        return new Vec3[] { worldPos, new Vec3(worldVel.x, worldVel.y, worldVel.z) };
     }
 
     public static BlockPos transformFromSable(Level level, BlockPos pos, BlockPos root) {
