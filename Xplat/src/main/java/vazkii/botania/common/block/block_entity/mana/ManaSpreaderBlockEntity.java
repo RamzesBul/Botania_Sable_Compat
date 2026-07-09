@@ -476,6 +476,13 @@ public class ManaSpreaderBlockEntity extends ExposedSimpleInventoryBlockEntity
 			return;
 		}
 
+		// On a fast-moving sub-level the cached world bounds can lag a tick and defeat the scan raycast's
+		// sub-level lookup, so refresh them from the current pose before simulating the fake burst. Server
+		// only: the refresh mutates lastGlobalBounds, which the client uses for its swept render bounds.
+		if (!level.isClientSide()) {
+			SableCompat.refreshSubLevelBounds(level, getBlockPos());
+		}
+
 		ManaBurstEntity fakeBurst = getBurst(true);
 		fakeBurst.setScanBeam();
 		ManaReceiver receiver = fakeBurst.getCollidedTile(true);
