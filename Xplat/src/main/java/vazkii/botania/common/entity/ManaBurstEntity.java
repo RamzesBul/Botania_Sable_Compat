@@ -395,7 +395,7 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 		float b = (color & 0xFF) / 255F;
 		float osize = getParticleSize();
 		float size = osize;
-		Vec3 particlePos = SableCompat.transformFromSable(level(), new Vec3(getX(), getY(), getZ()));
+		Vec3 particlePos = new Vec3(getX(), getY(), getZ());
 
 		if (fake) {
 			if (getMana() == getStartingMana()) {
@@ -426,8 +426,8 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 				double iterY = particlePos.y;
 				double iterZ = particlePos.z;
 
-				Vec3 currentPos = SableCompat.transformFromSable(level(), position());
-				Vec3 oldPos = SableCompat.transformFromSable(level(), new Vec3(xo, yo, zo));
+				Vec3 currentPos = position();
+				Vec3 oldPos = new Vec3(xo, yo, zo);
 				Vec3 diffVec = oldPos.subtract(currentPos);
 				Vec3 diffVecNorm = diffVec.normalize();
 
