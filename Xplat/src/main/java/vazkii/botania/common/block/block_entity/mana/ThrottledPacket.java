@@ -16,6 +16,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
 import vazkii.botania.api.block_entity.BlockEntityInterface;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.common.helper.EntityHelper;
 import vazkii.botania.common.helper.PlayerHelper;
 import vazkii.botania.common.item.WandOfTheForestItem;
@@ -67,12 +68,16 @@ public interface ThrottledPacket<T extends BlockEntity & ThrottledPacket<T>> ext
 	 */
 	default boolean mayBeRelevantForClients(Level level) {
 		BlockPos pos = getSelf().getBlockPos();
-		Vec3 posCenter = pos.getCenter();
+		// On a Sable sub-level the block sits at plot-grid coords; players look at and stand near its
+		// world position, so test against that (no-op transform for regular world blocks). Otherwise the
+		// looking/reach checks always fail and the throttled sync (e.g. mana amount) never fires.
+		BlockPos worldPos = SableCompat.transformFromSable(level, pos);
+		Vec3 posCenter = SableCompat.transformFromSable(level, pos.getCenter());
 		for (Player player : level.players()) {
 			if (player.isAlive()
 					&& EntityHelper.isLookingTowards(player, posCenter)
 					// is player close enough to potentially interact? (with some leeway)
-					&& player.canInteractWithBlock(pos, 2)
+					&& player.canInteractWithBlock(worldPos, 2)
 					// could player have the wand hud up?
 					&& PlayerHelper.hasHeldItemClass(player, WandOfTheForestItem.class)) {
 				return true;
