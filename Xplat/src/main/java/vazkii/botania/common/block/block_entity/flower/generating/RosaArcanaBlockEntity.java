@@ -28,13 +28,14 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import vazkii.botania.api.block_entity.GeneratingFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 import vazkii.botania.common.handler.BotaniaSounds;
 import vazkii.botania.common.helper.EntityHelper;
-import vazkii.botania.common.helper.MathHelper;
 import vazkii.botania.mixin.ExperienceOrbAccessor;
 import vazkii.botania.network.clientbound.FlowerTakeItemEffectPacket;
 import vazkii.botania.xplat.BotaniaConfig;
@@ -60,7 +61,12 @@ public class RosaArcanaBlockEntity extends GeneratingFlowerBlockEntity {
 			return;
 		}
 
-		AABB effectBounds = MathHelper.inflateBoxAround(getEffectivePos(), RANGE);
+		// On a Sable sub-level the flower's position is in plot-grid coords, but players/orbs/items live
+		// in world space; search around the flower's world position so entities are actually found.
+		// Center the box on the exact (un-rounded) world position: transformFromSable(BlockPos) would floor
+		// the fractional world position, offsetting the box by up to a block and consuming orbs early.
+		Vec3 worldCenter = SableCompat.transformFromSable(level, getEffectivePos().getCenter());
+		AABB effectBounds = AABB.ofSize(worldCenter, 2 * RANGE + 1, 2 * RANGE + 1, 2 * RANGE + 1);
 
 		if (consumeXpOrb(serverLevel, effectBounds)) {
 			return;

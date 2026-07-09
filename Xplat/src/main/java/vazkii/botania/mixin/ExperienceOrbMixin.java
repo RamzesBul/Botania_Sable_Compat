@@ -27,8 +27,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.common.block.block_entity.flower.generating.RosaArcanaBlockEntity;
-import vazkii.botania.common.helper.MathHelper;
 
 @Mixin(ExperienceOrb.class)
 public abstract class ExperienceOrbMixin extends Entity {
@@ -42,8 +42,10 @@ public abstract class ExperienceOrbMixin extends Entity {
 
 	@Inject(method = "scanForEntities", at = @At("HEAD"))
 	private void scanForFlower(CallbackInfo ci) {
+		// Sable-aware distance: the orb (world coords) and the flower (possibly plot-grid coords) may
+		// live in different coordinate spaces, so a raw distance would be meaningless.
 		if (this.botania_followingFlower == null
-				|| MathHelper.distSqr(this.botania_followingFlower, this.blockPosition()) > 64.0) {
+				|| SableCompat.distanceSqr(this.level(), this.botania_followingFlower, this.blockPosition()) > 64.0) {
 			this.botania_followingFlower = RosaArcanaBlockEntity.getClosestMatchingBlockEntity(
 					this.level(), this.blockPosition(), 8, RosaArcanaBlockEntity.class::isInstance);
 		}
@@ -67,7 +69,12 @@ public abstract class ExperienceOrbMixin extends Entity {
 	private void setMovementTowardsFlower(CallbackInfo ci) {
 		// [VanillaCopy] ExperienceOrb::tick, section "if (this.followingPlayer != null)"
 		if (this.botania_followingFlower != null) {
-			Vec3 vec3 = this.botania_followingFlower.getCenter().subtract(this.position());
+			// The flower may sit on a Sable sub-level in plot-grid coords; move toward its world position,
+			// otherwise the orb is pulled toward the (far-away) plot-grid location and scatters. Use the
+			// logical pose (same as the server movement and the consumption box) so client and server aim
+			// at the same point.
+			Vec3 flowerPos = SableCompat.transformFromSable(this.level(), this.botania_followingFlower.getCenter());
+			Vec3 vec3 = flowerPos.subtract(this.position());
 			double d0 = vec3.lengthSqr();
 			if (d0 < 64.0) {
 				double d1 = 1.0 - Math.sqrt(d0) / 8.0;
