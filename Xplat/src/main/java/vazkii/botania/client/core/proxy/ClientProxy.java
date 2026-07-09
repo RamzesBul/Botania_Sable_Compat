@@ -25,6 +25,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 import org.lwjgl.glfw.GLFW;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.core.handler.*;
 import vazkii.botania.client.fx.BoltParticleOptions;
 import vazkii.botania.client.fx.BoltRenderer;
@@ -105,7 +106,13 @@ public class ClientProxy implements Proxy {
 	@Override
 	public void addParticleForceNear(Level world, ParticleOptions particleData, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
 		Camera info = Minecraft.getInstance().gameRenderer.getMainCamera();
-		if (info.isInitialized() && info.getPosition().distanceToSqr(x, y, z) <= 1024.0D) {
+		// On a Sable sub-level the given coords are plot-grid coords far from the camera, so the raw
+		// distance check would always fail and drop the particle. Test visibility against the world-space
+		// position instead, but still spawn at the raw coords so Sable's ParticleEngine kick-out
+		// transforms the particle into world space and keeps it tracking the sub-level. No-op transform
+		// (and thus unchanged behavior) for regular-world coordinates.
+		Vec3 worldPos = SableCompat.transformFromSable(world, new Vec3(x, y, z));
+		if (info.isInitialized() && info.getPosition().distanceToSqr(worldPos.x, worldPos.y, worldPos.z) <= 1024.0D) {
 			world.addParticle(particleData, true, x, y, z, xSpeed, ySpeed, zSpeed);
 		}
 	}
