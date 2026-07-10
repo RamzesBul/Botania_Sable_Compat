@@ -12,8 +12,13 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 
+import dev.ryanhcode.sable.companion.ClientSubLevelAccess;
+import dev.ryanhcode.sable.companion.SableCompanion;
+
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleRenderType;
@@ -26,6 +31,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.phys.Vec3;
 
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
 
 import vazkii.botania.client.core.helper.CoreShaders;
@@ -37,6 +43,14 @@ public class FXSparkle extends TextureSheetParticle {
 	public final int particle = 16;
 	private final boolean slowdown = true;
 	private final SpriteSet sprite;
+	// When a fake preview sparkle is spawned on a Sable sub-level (in plot-grid/local coords), remember the
+	// sub-level and the local anchor so we can re-place the particle every frame from the sub-level's
+	// interpolated renderPose - the exact pose its blocks render with. Without this the particle is only
+	// positioned once per tick (Sable's kick-out/tracking uses logicalPose), so the fake-burst beam lags and
+	// jitters behind the smoothly-rotating platform.
+	@Nullable
+	private final ClientSubLevelAccess renderSubLevel;
+	private final Vec3 localAnchor;
 
 	public FXSparkle(ClientLevel world, double x, double y, double z, float size,
 			float red, float green, float blue, int m,
@@ -58,12 +72,31 @@ public class FXSparkle extends TextureSheetParticle {
 		this.corrupt = corrupt;
 		this.hasPhysics = !fake && !noClip;
 		this.sprite = sprite;
+		// x/y/z here are still the raw spawn coords (Sable kicks the particle out later, at add-time), so for a
+		// fake sparkle spawned inside a sub-level's plot grid they are its local coords.
+		this.localAnchor = new Vec3(x, y, z);
+		this.renderSubLevel = fake ? SableCompanion.INSTANCE.getContainingClient(localAnchor) : null;
 		setSpriteFromAge(sprite);
 	}
 
 	@Override
 	public float getQuadSize(float partialTicks) {
 		return quadSize * (lifetime - age + 1) / (float) lifetime;
+	}
+
+	@Override
+	public void render(VertexConsumer buffer, Camera camera, float partialTicks) {
+		if (renderSubLevel != null) {
+			// Re-place the particle from the sub-level's per-frame interpolated render pose so it stays locked
+			// to the (possibly moving/rotating) platform exactly like its blocks, instead of the once-per-tick
+			// position Sable's kick-out left behind. Both interpolation endpoints are set to the same value so
+			// the vanilla xo->x lerp resolves to this frame's pose.
+			Vec3 world = renderSubLevel.renderPose(partialTicks).transformPosition(localAnchor);
+			this.x = this.xo = world.x;
+			this.y = this.yo = world.y;
+			this.z = this.zo = world.z;
+		}
+		super.render(buffer, camera, partialTicks);
 	}
 
 	@Override
