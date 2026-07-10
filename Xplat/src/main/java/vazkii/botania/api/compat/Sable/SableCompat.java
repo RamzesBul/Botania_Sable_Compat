@@ -25,6 +25,8 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3d;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.BiConsumer;
 
 public class SableCompat {
@@ -117,6 +119,64 @@ public class SableCompat {
                 worldCenter.x - radius, worldCenter.y - radius, worldCenter.z - radius,
                 worldCenter.x + radius, worldCenter.y + radius, worldCenter.z + radius);
         return SableCompanion.INSTANCE.getAllIntersecting(level, bounds).iterator().hasNext();
+    }
+
+    /**
+     * Resolves the flower's 3x3 fluid-scan cells in world space and returns the plot-grid positions of the
+     * cells that are physically occupied by <em>other</em> sub-levels than the one holding the flower.
+     *
+     * <p>A fluid generator (e.g. Hydroangeas) scans the 3x3 around itself with {@code level.getFluidState(pos)}.
+     * On a sub-level those {@code pos} are plot-grid coords, so the scan sees water on the flower's own
+     * sub-level (its blocks share the level's chunks at those coords) but never water on a neighbouring
+     * sub-level, whose blocks live at unrelated plot-grid coords even when it is physically adjacent in the
+     * world. This maps each of the 9 cells into world space (via the flower sub-level's pose, or straight
+     * world coords when the flower is a regular-world block) and, for every other sub-level overlapping that
+     * area, inverse-transforms the cell into its plot grid. The returned positions can be fed to the same
+     * {@code level.getFluidState}/{@code pickupBlock} calls unchanged, since sub-level blocks are stored in the
+     * level's chunks at their plot-grid coords.
+     *
+     * @return the extra plot-grid positions to also scan; empty when Sable is absent or no other sub-level is
+     *         adjacent.
+     */
+    public static List<BlockPos> fluidScanPositionsOnOtherSubLevels(Level level, BlockPos flowerPos) {
+        SubLevelAccess own = SableCompanion.INSTANCE.getContaining(level, flowerPos);
+
+        // World-space centers of the flower's 3x3 cells (rotated with the flower's sub-level if it is on one).
+        Vec3[] worldCells = new Vec3[9];
+        int idx = 0;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                Vec3 cellCenter = Vec3.atCenterOf(flowerPos.offset(dx, 0, dz));
+                worldCells[idx++] = own != null ? own.logicalPose().transformPosition(cellCenter) : cellCenter;
+            }
+        }
+
+        Vec3 flowerWorld = own != null
+                ? own.logicalPose().transformPosition(Vec3.atCenterOf(flowerPos))
+                : Vec3.atCenterOf(flowerPos);
+        double radius = 3.0;
+        BoundingBox3d worldBox = new BoundingBox3d(
+                flowerWorld.x - radius, flowerWorld.y - radius, flowerWorld.z - radius,
+                flowerWorld.x + radius, flowerWorld.y + radius, flowerWorld.z + radius);
+
+        List<BlockPos> result = new ArrayList<>();
+        for (SubLevelAccess access : SableCompanion.INSTANCE.getAllIntersecting(level, worldBox)) {
+            if (access == own || !(access instanceof SubLevel sub)) {
+                continue;
+            }
+            BoundingBox3ic plotBounds = sub.getPlot().getBoundingBox();
+            if (plotBounds == null) {
+                continue;
+            }
+            Pose3dc pose = sub.logicalPose();
+            for (Vec3 worldCell : worldCells) {
+                Vector3d localPos = pose.transformPositionInverse(new Vector3d(worldCell.x, worldCell.y, worldCell.z));
+                if (plotBounds.contains(localPos)) {
+                    result.add(BlockPos.containing(localPos.x, localPos.y, localPos.z));
+                }
+            }
+        }
+        return result;
     }
 
     /**

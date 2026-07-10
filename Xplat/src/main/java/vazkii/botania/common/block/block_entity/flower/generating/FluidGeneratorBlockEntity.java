@@ -25,13 +25,16 @@ import net.minecraft.world.level.material.FluidState;
 import vazkii.botania.api.block_entity.GeneratingFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
 import vazkii.botania.api.block_entity.SpecialFlowerBlockEntity;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.state.BotaniaStateProperties;
 import vazkii.botania.client.fx.WispParticleData;
 import vazkii.botania.common.component.BotaniaDataComponents;
 import vazkii.botania.mixin.FlowingFluidAccessor;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 public abstract class FluidGeneratorBlockEntity extends GeneratingFlowerBlockEntity {
 	private static final String TAG_BURN_TIME = "burnTime";
@@ -81,7 +84,12 @@ public abstract class FluidGeneratorBlockEntity extends GeneratingFlowerBlockEnt
 
 		if (getMana() < getMaxMana()) {
 
-			for (BlockPos pos : getShuffledPositionsAround(getEffectivePos())) {
+			// Own 3x3 (covers the regular world and the flower's own sub-level), plus any cells physically
+			// occupied by neighbouring sub-levels so water on an adjacent sub-level is seen too.
+			List<BlockPos> scanPositions = new ArrayList<>(Arrays.asList(getShuffledPositionsAround(getEffectivePos())));
+			scanPositions.addAll(SableCompat.fluidScanPositionsOnOtherSubLevels(level, getEffectivePos()));
+
+			for (BlockPos pos : scanPositions) {
 
 				FluidState fluidState = level.getFluidState(pos);
 				if (!fluidState.is(consumedFluid) || !fluidState.isSource()) {
