@@ -163,6 +163,21 @@ public class SableCompat {
      *         adjacent.
      */
     public static List<BlockPos> blockScanPositionsOnOtherSubLevels(Level level, BlockPos center, int rangeH, int rangeV) {
+        return crossLevelScanPositions(level, center, rangeH, rangeV, false);
+    }
+
+    /**
+     * Like {@link #blockScanPositionsOnOtherSubLevels}, but when {@code center} itself sits on a sub-level this
+     * also returns the <em>regular-world</em> cells of the box (as world coords), so a sub-level scanner can see
+     * blocks in the surrounding world too. Use this when the search must work in both directions across the
+     * world/sub-level boundary (e.g. the Kekimurus eating a cake in the world next to its sub-level, or on a
+     * neighbouring sub-level).
+     */
+    public static List<BlockPos> blockScanPositionsOnOtherLevels(Level level, BlockPos center, int rangeH, int rangeV) {
+        return crossLevelScanPositions(level, center, rangeH, rangeV, true);
+    }
+
+    private static List<BlockPos> crossLevelScanPositions(Level level, BlockPos center, int rangeH, int rangeV, boolean includeWorld) {
         SubLevelAccess own = SableCompanion.INSTANCE.getContaining(level, center);
 
         // World-space centers of every scanned cell (rotated with the scanner's sub-level if it is on one).
@@ -185,21 +200,30 @@ public class SableCompat {
                 centerWorld.x - radius, centerWorld.y - radius, centerWorld.z - radius,
                 centerWorld.x + radius, centerWorld.y + radius, centerWorld.z + radius);
 
-        List<BlockPos> result = new ArrayList<>();
+        // Collect the other sub-levels overlapping the box once, then resolve each cell against them.
+        List<SubLevel> others = new ArrayList<>();
         for (SubLevelAccess access : SableCompanion.INSTANCE.getAllIntersecting(level, worldBox)) {
-            if (access == own || !(access instanceof SubLevel sub)) {
-                continue;
+            if (access != own && access instanceof SubLevel sub && sub.getPlot().getBoundingBox() != null) {
+                others.add(sub);
             }
-            BoundingBox3ic plotBounds = sub.getPlot().getBoundingBox();
-            if (plotBounds == null) {
-                continue;
-            }
-            Pose3dc pose = sub.logicalPose();
-            for (Vec3 worldCell : worldCells) {
-                Vector3d localPos = pose.transformPositionInverse(new Vector3d(worldCell.x, worldCell.y, worldCell.z));
-                if (plotBounds.contains(localPos)) {
-                    result.add(BlockPos.containing(localPos.x, localPos.y, localPos.z));
+        }
+
+        List<BlockPos> result = new ArrayList<>();
+        for (Vec3 worldCell : worldCells) {
+            BlockPos resolved = null;
+            for (SubLevel sub : others) {
+                Vector3d localPos = sub.logicalPose().transformPositionInverse(new Vector3d(worldCell.x, worldCell.y, worldCell.z));
+                if (sub.getPlot().getBoundingBox().contains(localPos)) {
+                    resolved = BlockPos.containing(localPos.x, localPos.y, localPos.z);
+                    break;
                 }
+            }
+            if (resolved != null) {
+                result.add(resolved);
+            } else if (includeWorld && own != null) {
+                // Cell is over the regular world; the scanner is on a sub-level, so its own-frame scan does not
+                // cover the world - add the world position so world blocks get seen too.
+                result.add(BlockPos.containing(worldCell.x, worldCell.y, worldCell.z));
             }
         }
         return result;
