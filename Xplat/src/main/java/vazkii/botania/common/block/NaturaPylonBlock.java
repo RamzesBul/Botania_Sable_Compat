@@ -16,10 +16,12 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.state.BotaniaStateProperties;
 import vazkii.botania.api.state.enums.AlfheimPortalState;
 import vazkii.botania.client.fx.SparkleParticleData;
 import vazkii.botania.client.fx.WispParticleData;
+import vazkii.botania.common.block.block_entity.AlfheimPortalBlockEntity;
 import vazkii.botania.common.block.block_entity.PylonBlockEntity;
 import vazkii.botania.common.block.mana.ManaPoolBlock;
 import vazkii.botania.xplat.BotaniaConfig;
@@ -46,6 +48,12 @@ public class NaturaPylonBlock extends PylonBlock {
 				return;
 			}
 
+			// Break the beam once the pylon drifts out of range of the portal (their sub-levels moved apart).
+			// Keep `activated` so the beam lights up again by itself when back within range.
+			if (!SableCompat.isWithinRange(level, self.centerPos, worldPosition, AlfheimPortalBlockEntity.PYLON_SEARCH_RANGE)) {
+				return;
+			}
+
 			if (BotaniaConfig.client().elfPortalParticlesEnabled()) {
 				double worldTime = level.getGameTime() * 0.2
 						+ new Random(state.getSeed(worldPosition)).nextDouble(2 * Math.PI);
@@ -62,18 +70,27 @@ public class NaturaPylonBlock extends PylonBlock {
 						rng.nextDouble() * 0.005, rng.nextDouble() * 0.015 + 0.075, rng.nextDouble() * 0.005);
 
 				if (level.getRandom().nextInt(3) == 0) {
-					Vec3 centerBlock = new Vec3(
+					// Point already in the portal's own frame (centerPos + jitter).
+					Vec3 targetInPortalFrame = new Vec3(
 							self.centerPos.getX() + 0.25 + 0.5 * rng.nextDouble(),
 							self.centerPos.getY() + 0.25 + 0.5 * rng.nextDouble(),
 							self.centerPos.getZ() + 0.25 + 0.5 * rng.nextDouble());
+					Vec3 ourLocal = new Vec3(x, y + 0.25, z);
 
-					double yStart = y + 0.25;
-					Vec3 ourCoords = new Vec3(x, yStart, z);
-					Vec3 movementVector = centerBlock.subtract(ourCoords).scale(0.04);
+					// The pylon and the portal may sit on different (possibly moving) sub-levels. Spawn the wisp
+					// in the PORTAL's coordinate frame: the portal center is fixed there, so once Sable binds the
+					// particle to the portal's sub-level (spawning it in that plot grid) it keeps heading toward
+					// the current portal position as the sub-level moves, instead of chasing where the portal was.
+					// The beam's origin still follows the pylon because a fresh particle spawns at its current
+					// spot each tick. When the portal is a regular-world block the point stays in world space and
+					// the particle simply flies to the (static) portal.
+					Vec3 ourWorld = SableCompat.transformFromSable(level, ourLocal, Vec3.atCenterOf(worldPosition));
+					Vec3 ourInPortalFrame = SableCompat.toSableLocalFrame(level, ourWorld, self.centerPos);
+					Vec3 movementVector = targetInPortalFrame.subtract(ourInPortalFrame).scale(0.04);
 
 					WispParticleData towardsPortalData = WispParticleData.wispNoClip(rng.nextFloat() * 0.1f + 0.25f,
 							rng.nextFloat() * 0.25f, rng.nextFloat() * 0.25f + 0.75f, rng.nextFloat() * 0.25f);
-					level.addParticle(towardsPortalData, ourCoords.x, ourCoords.y, ourCoords.z,
+					level.addParticle(towardsPortalData, ourInPortalFrame.x, ourInPortalFrame.y, ourInPortalFrame.z,
 							movementVector.x, movementVector.y, movementVector.z);
 				}
 			}

@@ -22,11 +22,13 @@ import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureManager;
 
+import dev.ryanhcode.sable.api.particle.ParticleSubLevelKickable;
+
 import org.lwjgl.opengl.GL11;
 
 import vazkii.botania.xplat.ClientXplatAbstractions;
 
-public class FXWisp extends TextureSheetParticle {
+public class FXWisp extends TextureSheetParticle implements ParticleSubLevelKickable {
 	private final boolean depthTest;
 	private final float moteParticleScale;
 	private final int moteHalfLife;
@@ -55,6 +57,28 @@ public class FXWisp extends TextureSheetParticle {
 		yo = y;
 		zo = z;
 		this.hasPhysics = !noClip;
+	}
+
+	// No-clip wisps (e.g. the Alfheim portal's pylon beam) must stay bound only to the sub-level they were
+	// spawned into and not be grabbed by other sub-levels they fly over/near. This only skips picking up
+	// intersecting sub-levels; a wisp kicked out into its own sub-level (via initialKickOut) still follows it,
+	// so sub-level-local effects are unaffected. Clip wisps keep the default behavior.
+	@Override
+	public boolean sable$shouldCareAboutIntersectingSubLevels() {
+		return hasPhysics;
+	}
+
+	// Stay glued to the tracked sub-level even when the wisp drifts away from its spawn anchor. Otherwise Sable
+	// detaches a tracked wisp once it moves >0.5 block (e.g. the pylon's rising spiral wisps drift upward),
+	// after which it flies free and scatters off a moving/rotating sub-level instead of staying on the pylon.
+	@Override
+	public boolean sable$shouldKickFromTracking() {
+		return false;
+	}
+
+	@Override
+	public boolean sable$shouldCollideWithTrackingSubLevel() {
+		return hasPhysics;
 	}
 
 	@Override
