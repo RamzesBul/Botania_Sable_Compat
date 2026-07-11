@@ -24,9 +24,8 @@ import net.minecraft.world.phys.Vec3;
 
 import vazkii.botania.api.block_entity.GeneratingFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
-
-import java.util.Optional;
 
 public class KekimurusBlockEntity extends GeneratingFlowerBlockEntity {
 	private static final int RANGE = 5;
@@ -45,10 +44,26 @@ public class KekimurusBlockEntity extends GeneratingFlowerBlockEntity {
 		}
 
 		BlockPos effectivePos = getEffectivePos();
-		Optional<BlockPos> cakePos = BlockPos.findClosestMatch(effectivePos, RANGE, RANGE,
-				pos -> getLevel().getBlockState(pos).getBlock() instanceof CakeBlock);
-		if (cakePos.isPresent()) {
-			BlockPos pos = cakePos.get();
+
+		// Closest cake on the flower's own level (its own sub-level, or the world).
+		BlockPos best = BlockPos.findClosestMatch(effectivePos, RANGE, RANGE,
+				pos -> getLevel().getBlockState(pos).getBlock() instanceof CakeBlock).orElse(null);
+		double bestDistSq = best != null ? SableCompat.distanceSqr(getLevel(), effectivePos, best) : Double.MAX_VALUE;
+
+		// Cakes on other levels physically within range: neighbouring sub-levels, or the surrounding world when
+		// the flower itself sits on a sub-level. Pick the overall closest by world distance.
+		for (BlockPos pos : SableCompat.blockScanPositionsOnOtherLevels(getLevel(), effectivePos, RANGE, RANGE)) {
+			if (getLevel().getBlockState(pos).getBlock() instanceof CakeBlock) {
+				double distSq = SableCompat.distanceSqr(getLevel(), effectivePos, pos);
+				if (distSq < bestDistSq) {
+					bestDistSq = distSq;
+					best = pos;
+				}
+			}
+		}
+
+		if (best != null) {
+			BlockPos pos = best;
 			BlockState state = getLevel().getBlockState(pos);
 			int nextSlicesEaten = state.getValue(CakeBlock.BITES) + 1;
 			if (nextSlicesEaten > CakeBlock.MAX_BITES) {
