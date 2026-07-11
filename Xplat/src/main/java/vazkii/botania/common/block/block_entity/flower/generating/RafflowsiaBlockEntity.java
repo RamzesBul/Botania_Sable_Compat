@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import vazkii.botania.api.block_entity.GeneratingFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.common.block.BotaniaBlocks;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 import vazkii.botania.common.component.BotaniaDataComponents;
@@ -28,7 +29,6 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Optional;
 
 public class RafflowsiaBlockEntity extends GeneratingFlowerBlockEntity {
 	public static final String TAG_LAST_FLOWERS = "lastFlowers";
@@ -93,13 +93,31 @@ public class RafflowsiaBlockEntity extends GeneratingFlowerBlockEntity {
 			return;
 		}
 
-		Optional<BlockPos> flowerPos = BlockPos.findClosestMatch(getEffectivePos(), RANGE, RANGE,
+		BlockPos effectivePos = getEffectivePos();
+
+		// Closest matching flower on this flower's own level (its own sub-level, or the world).
+		BlockPos best = BlockPos.findClosestMatch(effectivePos, RANGE, RANGE,
 				pos -> {
 					BlockState state = getLevel().getBlockState(pos);
 					return !state.is(BotaniaBlocks.RAFFLOWSIA) && state.is(BotaniaTags.Blocks.SPECIAL_FLOWERS);
-				});
-		if (flowerPos.isPresent()) {
-			BlockPos pos = flowerPos.get();
+				}).orElse(null);
+		double bestDistSq = best != null ? SableCompat.distanceSqr(getLevel(), effectivePos, best) : Double.MAX_VALUE;
+
+		// Matching flowers on other levels physically within range: neighbouring sub-levels, or the surrounding
+		// world when this flower sits on a sub-level. Pick the overall closest by world distance.
+		for (BlockPos pos : SableCompat.blockScanPositionsOnOtherLevels(getLevel(), effectivePos, RANGE, RANGE)) {
+			BlockState state = getLevel().getBlockState(pos);
+			if (!state.is(BotaniaBlocks.RAFFLOWSIA) && state.is(BotaniaTags.Blocks.SPECIAL_FLOWERS)) {
+				double distSq = SableCompat.distanceSqr(getLevel(), effectivePos, pos);
+				if (distSq < bestDistSq) {
+					bestDistSq = distSq;
+					best = pos;
+				}
+			}
+		}
+
+		if (best != null) {
+			BlockPos pos = best;
 
 			BlockState state = getLevel().getBlockState(pos);
 			streakLength = Math.min(streakLength + 1, processFlower(state.getBlock()));
