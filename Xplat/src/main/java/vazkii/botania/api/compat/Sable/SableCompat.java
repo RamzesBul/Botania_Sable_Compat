@@ -139,25 +139,51 @@ public class SableCompat {
      *         adjacent.
      */
     public static List<BlockPos> fluidScanPositionsOnOtherSubLevels(Level level, BlockPos flowerPos) {
-        SubLevelAccess own = SableCompanion.INSTANCE.getContaining(level, flowerPos);
+        // The fluid scan is a flat 3x3 in the flower's X/Z plane (no vertical spread).
+        return blockScanPositionsOnOtherSubLevels(level, flowerPos, 1, 0);
+    }
 
-        // World-space centers of the flower's 3x3 cells (rotated with the flower's sub-level if it is on one).
-        Vec3[] worldCells = new Vec3[9];
-        int idx = 0;
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                Vec3 cellCenter = Vec3.atCenterOf(flowerPos.offset(dx, 0, dz));
-                worldCells[idx++] = own != null ? own.logicalPose().transformPosition(cellCenter) : cellCenter;
+    /**
+     * Resolves a box-shaped block scan ({@code center} ± {@code rangeH} horizontally, ± {@code rangeV}
+     * vertically, in the scanner's own frame) in world space and returns the plot-grid positions of the cells
+     * that are physically occupied by <em>other</em> sub-levels than the one holding {@code center}.
+     *
+     * <p>Block-scanning game logic (fluid generators, the Alfheim portal's pylon search, ...) walks a box of
+     * {@code pos} around itself and queries {@code level.getBlockState(pos)} / {@code getBlockEntity(pos)}. On a
+     * sub-level those {@code pos} are plot-grid coords, so the scan sees blocks on its own sub-level (they share
+     * the level's chunks at those coords) but never blocks on a neighbouring sub-level, whose blocks live at
+     * unrelated plot-grid coords even when physically adjacent in the world. This maps each cell into world
+     * space (via {@code center}'s sub-level pose, or straight world coords when {@code center} is a
+     * regular-world block) and, for every other sub-level overlapping that area, inverse-transforms the cell
+     * into its plot grid. The returned positions can be fed to the same {@code level.getBlockState} /
+     * {@code getBlockEntity} / {@code pos.below()} calls unchanged, since sub-level blocks are stored in the
+     * level's chunks at their plot-grid coords (and {@code below()} is the sub-level's own local down).
+     *
+     * @return the extra plot-grid positions to also scan; empty when Sable is absent or no other sub-level is
+     *         adjacent.
+     */
+    public static List<BlockPos> blockScanPositionsOnOtherSubLevels(Level level, BlockPos center, int rangeH, int rangeV) {
+        SubLevelAccess own = SableCompanion.INSTANCE.getContaining(level, center);
+
+        // World-space centers of every scanned cell (rotated with the scanner's sub-level if it is on one).
+        List<Vec3> worldCells = new ArrayList<>();
+        for (int dx = -rangeH; dx <= rangeH; dx++) {
+            for (int dy = -rangeV; dy <= rangeV; dy++) {
+                for (int dz = -rangeH; dz <= rangeH; dz++) {
+                    Vec3 cellCenter = Vec3.atCenterOf(center.offset(dx, dy, dz));
+                    worldCells.add(own != null ? own.logicalPose().transformPosition(cellCenter) : cellCenter);
+                }
             }
         }
 
-        Vec3 flowerWorld = own != null
-                ? own.logicalPose().transformPosition(Vec3.atCenterOf(flowerPos))
-                : Vec3.atCenterOf(flowerPos);
-        double radius = 3.0;
+        Vec3 centerWorld = own != null
+                ? own.logicalPose().transformPosition(Vec3.atCenterOf(center))
+                : Vec3.atCenterOf(center);
+        // Generous enough to reach any sub-level whose blocks could fall within the (possibly rotated) box.
+        double radius = Math.max(rangeH, rangeV) + 2.0;
         BoundingBox3d worldBox = new BoundingBox3d(
-                flowerWorld.x - radius, flowerWorld.y - radius, flowerWorld.z - radius,
-                flowerWorld.x + radius, flowerWorld.y + radius, flowerWorld.z + radius);
+                centerWorld.x - radius, centerWorld.y - radius, centerWorld.z - radius,
+                centerWorld.x + radius, centerWorld.y + radius, centerWorld.z + radius);
 
         List<BlockPos> result = new ArrayList<>();
         for (SubLevelAccess access : SableCompanion.INSTANCE.getAllIntersecting(level, worldBox)) {
@@ -246,6 +272,42 @@ public class SableCompat {
 
     public static Vec3 transformFromSable(Level level, Vec3 pos) {
         return transformFromSable(level, pos, pos);
+    }
+
+    /**
+     * Expresses a world-space point in the local (plot-grid) coordinate frame of the sub-level containing
+     * {@code frameAnchor}. Returns {@code worldPoint} unchanged when {@code frameAnchor} is a regular-world
+     * block (or Sable is absent) — the inverse of {@link #transformFromSable(Level, Vec3, Vec3)}.
+     *
+     * <p>Used by the Alfheim portal pylon beam so its particles can be spawned in the <em>portal's</em> frame:
+     * the portal center is fixed there, so a particle bound to that sub-level keeps flying toward the current
+     * portal position even as the sub-level moves/rotates, instead of chasing where the portal used to be.
+     */
+    public static Vec3 toSableLocalFrame(Level level, Vec3 worldPoint, BlockPos frameAnchor) {
+        SubLevelAccess sub = SableCompanion.INSTANCE.getContaining(level, frameAnchor);
+        return sub == null ? worldPoint : sub.logicalPose().transformPositionInverse(worldPoint);
+    }
+
+    /**
+     * @return whether {@code targetPos} lies within {@code range} (Chebyshev / cube distance) of
+     *         {@code anchorPos} when both are measured in {@code anchorPos}'s coordinate frame. {@code targetPos}
+     *         may live on a different sub-level: it is transformed to world space and then into
+     *         {@code anchorPos}'s frame, so the check tracks the two sub-levels' current poses. When both are in
+     *         the same frame (regular world, or the same sub-level) this reduces to the plain cube test used by
+     *         the vanilla scan, so it does not change same-frame behavior.
+     *
+     * <p>Used to break/restore the Alfheim portal &lt;-&gt; pylon link when their sub-levels drift apart or back
+     * together.
+     */
+    public static boolean isWithinRange(Level level, BlockPos anchorPos, BlockPos targetPos, int range) {
+        Vec3 targetWorld = transformFromSable(level, Vec3.atCenterOf(targetPos));
+        Vec3 targetInAnchorFrame = toSableLocalFrame(level, targetWorld, anchorPos);
+        Vec3 anchorCenter = Vec3.atCenterOf(anchorPos);
+        double dx = Math.abs(targetInAnchorFrame.x - anchorCenter.x);
+        double dy = Math.abs(targetInAnchorFrame.y - anchorCenter.y);
+        double dz = Math.abs(targetInAnchorFrame.z - anchorCenter.z);
+        // +0.5 tolerance keeps cube-edge pylons included despite rotation / rounding.
+        return Math.max(dx, Math.max(dy, dz)) <= range + 0.5;
     }
 
     public static Quaternionf transformCameraOrientation(EntityRenderDispatcher instance, BlockEntity entity) {

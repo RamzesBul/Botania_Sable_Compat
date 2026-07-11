@@ -53,6 +53,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.block.Wandable;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.internal.ItemSource;
 import vazkii.botania.api.recipe.ElvenTradeRecipe;
 import vazkii.botania.api.recipe.ProcessingRecipeInput;
@@ -501,6 +502,14 @@ public class AlfheimPortalBlockEntity extends BlockEntity implements Wandable {
 			}
 		}
 
+		// Also pick up pylons that physically sit within range but live on a neighbouring Sable sub-level
+		// (their blocks are stored at unrelated plot-grid coords, so the own-frame scan above misses them).
+		for (BlockPos pos : SableCompat.blockScanPositionsOnOtherSubLevels(level, getBlockPos(), PYLON_SEARCH_RANGE, PYLON_SEARCH_RANGE)) {
+			if (isValidPylonPosition(pos)) {
+				result.add(pos.immutable());
+			}
+		}
+
 		cachedPylonPositions.clear();
 		cachedPylonPositions.addAll(result);
 
@@ -509,6 +518,9 @@ public class AlfheimPortalBlockEntity extends BlockEntity implements Wandable {
 
 	private boolean isValidPylonPosition(BlockPos pos) {
 		return getLevel().hasChunkAt(pos)
+				// A pylon on another sub-level stays a valid plot-grid position even after that sub-level drifts
+				// out of range, so re-check world distance here to break/restore the link as sub-levels move.
+				&& SableCompat.isWithinRange(getLevel(), getBlockPos(), pos, PYLON_SEARCH_RANGE)
 				&& getLevel().getBlockState(pos).is(BotaniaBlocks.NATURA_PYLON)
 				&& getLevel().getBlockState(pos.below()).getBlock() instanceof ManaPoolBlock;
 	}
