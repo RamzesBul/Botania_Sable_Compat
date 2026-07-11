@@ -163,7 +163,7 @@ public class SableCompat {
      *         adjacent.
      */
     public static List<BlockPos> blockScanPositionsOnOtherSubLevels(Level level, BlockPos center, int rangeH, int rangeV) {
-        return crossLevelScanPositions(level, center, rangeH, rangeV, false);
+        return crossLevelScanPositions(level, center, rangeH, rangeV, rangeV, false);
     }
 
     /**
@@ -174,16 +174,26 @@ public class SableCompat {
      * neighbouring sub-level).
      */
     public static List<BlockPos> blockScanPositionsOnOtherLevels(Level level, BlockPos center, int rangeH, int rangeV) {
-        return crossLevelScanPositions(level, center, rangeH, rangeV, true);
+        return blockScanPositionsOnOtherLevels(level, center, rangeH, rangeV, rangeV);
     }
 
-    private static List<BlockPos> crossLevelScanPositions(Level level, BlockPos center, int rangeH, int rangeV, boolean includeWorld) {
+    /**
+     * As {@link #blockScanPositionsOnOtherLevels(Level, BlockPos, int, int)}, but with an asymmetric vertical
+     * box ({@code rangeDown} below and {@code rangeUp} above {@code center}), matching
+     * {@link vazkii.botania.common.helper.MathHelper#aroundPosClosed(BlockPos, int, int, int)}. Used by the
+     * Munchdew, whose leaf search is tall and one-sided ({@code 0} down, {@code RANGE_Y} up).
+     */
+    public static List<BlockPos> blockScanPositionsOnOtherLevels(Level level, BlockPos center, int rangeH, int rangeDown, int rangeUp) {
+        return crossLevelScanPositions(level, center, rangeH, rangeDown, rangeUp, true);
+    }
+
+    private static List<BlockPos> crossLevelScanPositions(Level level, BlockPos center, int rangeH, int rangeDown, int rangeUp, boolean includeWorld) {
         SubLevelAccess own = SableCompanion.INSTANCE.getContaining(level, center);
 
         // World-space centers of every scanned cell (rotated with the scanner's sub-level if it is on one).
         List<Vec3> worldCells = new ArrayList<>();
         for (int dx = -rangeH; dx <= rangeH; dx++) {
-            for (int dy = -rangeV; dy <= rangeV; dy++) {
+            for (int dy = -rangeDown; dy <= rangeUp; dy++) {
                 for (int dz = -rangeH; dz <= rangeH; dz++) {
                     Vec3 cellCenter = Vec3.atCenterOf(center.offset(dx, dy, dz));
                     worldCells.add(own != null ? own.logicalPose().transformPosition(cellCenter) : cellCenter);
@@ -195,7 +205,7 @@ public class SableCompat {
                 ? own.logicalPose().transformPosition(Vec3.atCenterOf(center))
                 : Vec3.atCenterOf(center);
         // Generous enough to reach any sub-level whose blocks could fall within the (possibly rotated) box.
-        double radius = Math.max(rangeH, rangeV) + 2.0;
+        double radius = Math.max(rangeH, Math.max(rangeDown, rangeUp)) + 2.0;
         BoundingBox3d worldBox = new BoundingBox3d(
                 centerWorld.x - radius, centerWorld.y - radius, centerWorld.z - radius,
                 centerWorld.x + radius, centerWorld.y + radius, centerWorld.z + radius);

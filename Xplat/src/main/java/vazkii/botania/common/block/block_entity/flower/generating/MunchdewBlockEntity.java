@@ -27,6 +27,7 @@ import net.minecraft.world.phys.Vec3;
 
 import vazkii.botania.api.block_entity.GeneratingFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.state.BotaniaStateProperties;
 import vazkii.botania.client.fx.WispParticleData;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
@@ -116,16 +117,12 @@ public class MunchdewBlockEntity extends GeneratingFlowerBlockEntity {
 
 		BlockPos.MutableBlockPos checkPos = new BlockPos.MutableBlockPos();
 		for (BlockPos pos : MathHelper.aroundPosClosed(effectivePos, RANGE, 0, RANGE_Y)) {
-			BlockState state = level.getBlockState(pos);
-			if (state.is(BotaniaTags.Blocks.MUNCHDEW_CONSUMABLE)) {
-				for (Direction dir : Direction.values()) {
-					if (level.isEmptyBlock(checkPos.setWithOffset(pos, dir))) {
-						coordsMap.put(pos.immutable(), (state.hasProperty(LeavesBlock.DISTANCE)
-								? state.getValue(LeavesBlock.DISTANCE) : 1) + 2.0f * rng.nextFloat());
-						break;
-					}
-				}
-			}
+			collectLeaf(coordsMap, checkPos, pos, rng);
+		}
+		// Also eat leaves physically within range on other levels: neighbouring sub-levels, or the surrounding
+		// world when this flower sits on a sub-level.
+		for (BlockPos pos : SableCompat.blockScanPositionsOnOtherLevels(level, effectivePos, RANGE, 0, RANGE_Y)) {
+			collectLeaf(coordsMap, checkPos, pos, rng);
 		}
 
 		if (coordsMap.isEmpty()) {
@@ -154,6 +151,22 @@ public class MunchdewBlockEntity extends GeneratingFlowerBlockEntity {
 		level.gameEvent(null, GameEvent.BLOCK_DESTROY, breakCoords);
 		addMana(MANA_PER_LEAF);
 		return true;
+	}
+
+	// Records a consumable leaf at {@code pos} (own-frame or another level's plot-grid / world position) if it
+	// has an exposed face, weighting it like vanilla by its leaf DISTANCE plus a small random offset.
+	private void collectLeaf(Map<BlockPos, Float> coordsMap, BlockPos.MutableBlockPos checkPos, BlockPos pos, RandomSource rng) {
+		BlockState state = level.getBlockState(pos);
+		if (!state.is(BotaniaTags.Blocks.MUNCHDEW_CONSUMABLE)) {
+			return;
+		}
+		for (Direction dir : Direction.values()) {
+			if (level.isEmptyBlock(checkPos.setWithOffset(pos, dir))) {
+				coordsMap.put(pos.immutable(), (state.hasProperty(LeavesBlock.DISTANCE)
+						? state.getValue(LeavesBlock.DISTANCE) : 1) + 2.0f * rng.nextFloat());
+				break;
+			}
+		}
 	}
 
 	@Override
