@@ -51,6 +51,16 @@ public class SableCompat {
     }
 
     /**
+     * Continuous-position variant of {@link #distanceSqr(Level, Vec3i, Vec3i)}: the world-space squared
+     * distance between two exact points, each translated via the pose of the sub-level containing it (or left
+     * as-is for regular-world points). Use when either endpoint is a plot-grid coordinate that must be compared
+     * against a world position (e.g. the Spectranthemum's teleport cost from its bound block to a nearby item).
+     */
+    public static double distanceSqr(Level level, Vec3 a, Vec3 b) {
+        return SableCompanion.INSTANCE.distanceSquaredWithSubLevels(level, a, b);
+    }
+
+    /**
      * Feeds every loaded block-entity of sub-levels whose world bounds are within {@code radius} blocks
      * of {@code worldCenter} (a world-space point) to {@code consumer}. Block-entities living on a
      * sub-level are stored in plot-grid coordinates far from world space, so a normal world-space chunk
