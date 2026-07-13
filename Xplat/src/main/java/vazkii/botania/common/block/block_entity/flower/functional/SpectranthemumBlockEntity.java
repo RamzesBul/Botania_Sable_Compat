@@ -23,6 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.block_entity.FunctionalFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.mana.ManaItem;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 import vazkii.botania.common.helper.EntityHelper;
@@ -68,7 +69,10 @@ public class SpectranthemumBlockEntity extends FunctionalFlowerBlockEntity {
 			}
 
 			// TODO: maybe teleport fewer items if the cost is too much?
-			double cost = BASE_COST * stack.getCount() * Math.sqrt(bindPos.distToCenterSqr(item.position()));
+			// World-aware distance: bindPos may be a sub-level's plot-grid coordinate (far from the item's world
+			// position), so a raw coordinate distance would be astronomical and the teleport would never afford.
+			double cost = BASE_COST * stack.getCount()
+					* Math.sqrt(SableCompat.distanceSqr(getLevel(), Vec3.atCenterOf(bindPos), item.position()));
 			if (getMana() >= cost) {
 				spawnExplosionParticles(item, 10);
 				BlockPos sourcePos = item.blockPosition();
