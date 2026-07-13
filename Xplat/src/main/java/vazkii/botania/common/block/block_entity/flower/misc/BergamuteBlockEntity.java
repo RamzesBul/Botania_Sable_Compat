@@ -19,6 +19,7 @@ import net.minecraft.world.phys.Vec3;
 
 import vazkii.botania.api.block_entity.RadiusDescriptor;
 import vazkii.botania.api.block_entity.SpecialFlowerBlockEntity;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.fx.SparkleParticleData;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 import vazkii.botania.common.block.block_entity.mana.ManaPoolBlockEntity;
@@ -65,7 +66,10 @@ public class BergamuteBlockEntity extends SpecialFlowerBlockEntity {
 		BergamuteBlockEntity tile = null;
 
 		for (BergamuteBlockEntity f : level.isClientSide() ? clientFlowers : serverFlowers) {
-			if (level == f.level && !f.isPowered() && f.getEffectivePos().distToCenterSqr(x, y, z) <= RANGE * RANGE) {
+			// World-aware distance: a Bergamute on a sub-level has plot-grid coords far from the sound's world
+			// position, so a raw coordinate distance would never be in range and would never muffle.
+			if (level == f.level && !f.isPowered()
+					&& SableCompat.distanceSqr(level, f.getEffectivePos().getCenter(), new Vec3(x, y, z)) <= RANGE * RANGE) {
 				if (count == 0 || level.getRandom().nextInt(count) == 0) {
 					tile = f;
 				}
@@ -96,8 +100,12 @@ public class BergamuteBlockEntity extends SpecialFlowerBlockEntity {
 		// find the point on the line between source and destination that is closest to each Bergamute,
 		// and check whether it's actually in range of that Bergamute
 		// (based on https://stackoverflow.com/questions/51905268/how-to-find-closest-point-on-line)
+		// Everything is projected into world space first, so a Bergamute (or the vibration) living on a
+		// sub-level is compared in the same coordinate space rather than its unrelated plot-grid coords.
 		Vec3 destCenterPos = destBlockPos.getCenter();
-		Vec3 vibrationTravelVector = sourceCenterPos.vectorTo(destCenterPos);
+		Vec3 sourceWorldPos = SableCompat.transformFromSable(level, sourceCenterPos);
+		Vec3 destWorldPos = SableCompat.transformFromSable(level, destCenterPos);
+		Vec3 vibrationTravelVector = sourceWorldPos.vectorTo(destWorldPos);
 		double vibrationTravelDist = vibrationTravelVector.length();
 		Vec3 vibrationTravelDir = vibrationTravelVector.normalize();
 
@@ -106,10 +114,10 @@ public class BergamuteBlockEntity extends SpecialFlowerBlockEntity {
 				continue;
 			}
 
-			Vec3 flowerPos = f.getEffectivePos().getCenter();
-			Vec3 vecSourceToFlower = sourceCenterPos.vectorTo(flowerPos);
+			Vec3 flowerPos = SableCompat.transformFromSable(level, f.getEffectivePos().getCenter());
+			Vec3 vecSourceToFlower = sourceWorldPos.vectorTo(flowerPos);
 			double travelPosition = Mth.clamp(vibrationTravelDir.dot(vecSourceToFlower), 0, vibrationTravelDist);
-			Vec3 closestPos = sourceCenterPos.add(vibrationTravelDir.scale(travelPosition));
+			Vec3 closestPos = sourceWorldPos.add(vibrationTravelDir.scale(travelPosition));
 			if (flowerPos.distanceToSqr(closestPos) <= RANGE * RANGE) {
 				return true;
 			}
