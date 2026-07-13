@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import vazkii.botania.api.block_entity.FunctionalFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 import vazkii.botania.common.handler.BotaniaSounds;
 import vazkii.botania.common.lib.BotaniaTags;
@@ -57,7 +58,9 @@ public class AgricarnationBlockEntity extends FunctionalFlowerBlockEntity {
 
 			for (int i = 4; i > -2; i--) {
 				int y = getEffectivePos().getY() + i;
-				pos.set(x, y, z);
+				// Resolve the column cell to whichever level physically occupies it (own sub-level, a neighbouring
+				// sub-level, or the world), so the flower fertilizes crops across the world<->sub-level boundary.
+				pos.set(SableCompat.resolveCellAcrossLevels(serverLevel, getEffectivePos(), new BlockPos(x, y, z)));
 				BlockState state = serverLevel.getBlockState(pos);
 				if (state.isAir()) {
 					continue;
