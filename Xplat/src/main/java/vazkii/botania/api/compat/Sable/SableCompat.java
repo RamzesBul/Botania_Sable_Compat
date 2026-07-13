@@ -319,6 +319,38 @@ public class SableCompat {
     }
 
     /**
+     * Resolves a single scan cell given in the scanner's own frame ({@code anchor}'s sub-level, or the world)
+     * into the storage position of whichever level physically occupies that world cell: the plot-grid position
+     * of the sub-level covering it (the scanner's own or a neighbouring one), or the world position when no
+     * sub-level covers it. Lets a column/point scan cross the world&lt;-&gt;sub-level boundary while still being
+     * fed to plain {@code level.getBlockState}/grow calls, since sub-level blocks are real chunks of the level.
+     *
+     * <p>Unlike {@link #blockScanPositionsOnOtherLevels}, this includes the scanner's <em>own</em> sub-level, so
+     * a cell that stays over it round-trips back to its original plot-grid position (no behavior change on the
+     * own level).
+     */
+    public static BlockPos resolveCellAcrossLevels(Level level, BlockPos anchor, BlockPos localCell) {
+        SubLevelAccess own = SableCompanion.INSTANCE.getContaining(level, anchor);
+        Vec3 worldCell = own != null
+                ? own.logicalPose().transformPosition(Vec3.atCenterOf(localCell))
+                : Vec3.atCenterOf(localCell);
+
+        BoundingBox3d box = new BoundingBox3d(
+                worldCell.x - 0.5, worldCell.y - 0.5, worldCell.z - 0.5,
+                worldCell.x + 0.5, worldCell.y + 0.5, worldCell.z + 0.5);
+        for (SubLevelAccess access : SableCompanion.INSTANCE.getAllIntersecting(level, box)) {
+            if (!(access instanceof SubLevel sub) || sub.getPlot().getBoundingBox() == null) {
+                continue;
+            }
+            Vector3d localPos = sub.logicalPose().transformPositionInverse(new Vector3d(worldCell.x, worldCell.y, worldCell.z));
+            if (sub.getPlot().getBoundingBox().contains(localPos)) {
+                return BlockPos.containing(localPos.x, localPos.y, localPos.z);
+            }
+        }
+        return BlockPos.containing(worldCell.x, worldCell.y, worldCell.z);
+    }
+
+    /**
      * Expresses a world-space point in the local (plot-grid) coordinate frame of the sub-level containing
      * {@code frameAnchor}. Returns {@code worldPoint} unchanged when {@code frameAnchor} is a regular-world
      * block (or Sable is absent) — the inverse of {@link #transformFromSable(Level, Vec3, Vec3)}.
