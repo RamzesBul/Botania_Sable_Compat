@@ -25,6 +25,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.phys.Vec3;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
+
 // [VanillaCopy] ItemPickupParticle, but with BlockPos as target instead of an entity
 public class FlowerItemPickupParticle extends Particle {
 	private static final int LIFE_TIME = 3;
@@ -70,9 +72,16 @@ public class FlowerItemPickupParticle extends Particle {
 		float time = ((float) this.life + partialTicks) / LIFE_TIME;
 		time *= time;
 		Vec3 targetPos = target.getCenter().add(level.getBlockState(target).getOffset(level, target));
-		double xx = Mth.lerp(time, this.itemEntity.getX(), targetPos.x);
-		double yy = Mth.lerp(time, this.itemEntity.getY(), targetPos.y);
-		double zz = Mth.lerp(time, this.itemEntity.getZ(), targetPos.z);
+		// Both endpoints may be a sub-level's plot-grid coordinates (far from world space); project them to world
+		// via the sub-level's per-frame render pose so the animation flies in the right place instead of vanishing
+		// off at ~2e7. No-op in the regular world.
+		Vec3 itemStart = SableCompat.transformFromSableRender(level,
+				new Vec3(this.itemEntity.getX(), this.itemEntity.getY(), this.itemEntity.getZ()),
+				this.itemEntity.blockPosition(), partialTicks);
+		targetPos = SableCompat.transformFromSableRender(level, targetPos, target, partialTicks);
+		double xx = Mth.lerp(time, itemStart.x, targetPos.x);
+		double yy = Mth.lerp(time, itemStart.y, targetPos.y);
+		double zz = Mth.lerp(time, itemStart.z, targetPos.z);
 		MultiBufferSource.BufferSource source = this.renderBuffers.bufferSource();
 		Vec3 pos = renderInfo.getPosition();
 		this.entityRenderDispatcher
