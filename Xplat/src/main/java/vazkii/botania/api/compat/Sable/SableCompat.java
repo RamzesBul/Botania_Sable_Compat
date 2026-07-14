@@ -319,6 +319,21 @@ public class SableCompat {
     }
 
     /**
+     * Client render-time variant of {@link #transformFromSable(Level, Vec3, Vec3)}: translates {@code pos} into
+     * world space via the sub-level's interpolated {@code renderPose} (the exact per-frame pose its blocks
+     * render with) instead of the tick-synced {@code logicalPose}. Returns {@code pos} unchanged when
+     * {@code root} is a regular-world block or the sub-level is not a client one. Use for smooth per-frame
+     * effects that must line up with the (possibly moving) sub-level, e.g. the Hopperhock item-pickup animation.
+     */
+    public static Vec3 transformFromSableRender(Level level, Vec3 pos, BlockPos root, float partialTick) {
+        SubLevelAccess subLevelAccess = SableCompanion.INSTANCE.getContaining(level, root);
+        if (!(subLevelAccess instanceof ClientSubLevelAccess clientSubLevel)) {
+            return pos;
+        }
+        return clientSubLevel.renderPose(partialTick).transformPosition(pos);
+    }
+
+    /**
      * Resolves a single scan cell given in the scanner's own frame ({@code anchor}'s sub-level, or the world)
      * into the storage position of whichever level physically occupies that world cell: the plot-grid position
      * of the sub-level covering it (the scanner's own or a neighbouring one), or the world position when no
