@@ -10,6 +10,9 @@ package vazkii.botania.common.block.block_entity.flower.functional;
 
 import com.mojang.blaze3d.platform.Window;
 
+import dev.ryanhcode.sable.companion.SableCompanion;
+import dev.ryanhcode.sable.companion.SubLevelAccess;
+
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
@@ -21,6 +24,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -77,16 +81,44 @@ public class HopperhockBlockEntity extends FunctionalFlowerBlockEntity implement
 			return;
 		}
 
+		// Resolve each neighbouring inventory across levels (own sub-level, the world, or a neighbouring
+		// sub-level), like the Corporea Funnel's getInvPos, so a flower and its target chest can be on
+		// different levels.
+		Map<Direction, BlockPos> invPositions = new EnumMap<>(Direction.class);
+		for (Direction dir : Direction.values()) {
+			BlockPos invPos = resolveInventoryPos(outPos, dir);
+			if (invPos != null) {
+				invPositions.put(dir, invPos);
+			}
+		}
+		if (invPositions.isEmpty()) {
+			return;
+		}
+
 		Map<Direction, List<ItemStack>> directionFilters = new EnumMap<>(Direction.class);
 		Set<Direction> unfilteredDirections = EnumSet.noneOf(Direction.class);
-		findFilterDirections(outPos, unfilteredDirections, directionFilters);
+		findFilterDirections(invPositions, unfilteredDirections, directionFilters);
 		if (directionFilters.isEmpty() && unfilteredDirections.isEmpty()) {
 			return;
 		}
 
-		if (moveItems(items, outPos, directionFilters, unfilteredDirections) && getMana() > 0) {
+		if (moveItems(items, invPositions, directionFilters, unfilteredDirections) && getMana() > 0) {
 			addMana(-1);
 		}
+	}
+
+	@Nullable
+	private BlockPos resolveInventoryPos(BlockPos outPos, Direction dir) {
+		SubLevelAccess flowerSubLevel = SableCompanion.INSTANCE.getContaining(level, outPos);
+		Direction sideOfInventory = dir.getOpposite();
+		BlockPos localNeighbor = outPos.relative(dir);
+		return SableCompanion.INSTANCE.runIncludingSubLevels(
+				level,
+				Vec3.atCenterOf(localNeighbor),
+				true,
+				flowerSubLevel,
+				(subLevel, pos) -> XplatAbstractions.INSTANCE.hasInventory(level, pos, sideOfInventory) ? pos : null
+		);
 	}
 
 	public HopperhockFilterType getFilterType() {
@@ -94,28 +126,25 @@ public class HopperhockBlockEntity extends FunctionalFlowerBlockEntity implement
 				.orElse(HopperhockFilterType.ACCEPT_IN_FRAME);
 	}
 
-	private void findFilterDirections(BlockPos outPos, Set<Direction> unfilteredDirections,
+	private void findFilterDirections(Map<Direction, BlockPos> invPositions, Set<Direction> unfilteredDirections,
 			Map<Direction, List<ItemStack>> directionFilters) {
-		for (Direction dir : Direction.values()) {
-			BlockPos inventoryPos = outPos.relative(dir);
-			Direction sideOfInventory = dir.getOpposite();
-
-			if (XplatAbstractions.INSTANCE.hasInventory(level, inventoryPos, sideOfInventory)) {
-				List<ItemStack> filter = getFilterType() != HopperhockFilterType.ACCEPT_ALL
-						// don't bother looking for filters if the flower ignores them anyway
-						? FilterHelper.getFiltersOnBlock(level, inventoryPos, true)
-						: List.of();
-				if (filter.isEmpty()) {
-					unfilteredDirections.add(dir);
-				} else {
-					directionFilters.put(dir, filter);
-				}
+		for (Map.Entry<Direction, BlockPos> entry : invPositions.entrySet()) {
+			BlockPos inventoryPos = entry.getValue();
+			// inventory presence was already confirmed while resolving invPositions
+			List<ItemStack> filter = getFilterType() != HopperhockFilterType.ACCEPT_ALL
+					// don't bother looking for filters if the flower ignores them anyway
+					? FilterHelper.getFiltersOnBlock(level, inventoryPos, true)
+					: List.of();
+			if (filter.isEmpty()) {
+				unfilteredDirections.add(entry.getKey());
+			} else {
+				directionFilters.put(entry.getKey(), filter);
 			}
 		}
 	}
 
-	private boolean moveItems(List<ItemEntity> items, BlockPos outPos, Map<Direction, List<ItemStack>> directionFilters,
-			Set<Direction> unfilteredDirections) {
+	private boolean moveItems(List<ItemEntity> items, Map<Direction, BlockPos> invPositions,
+			Map<Direction, List<ItemStack>> directionFilters, Set<Direction> unfilteredDirections) {
 		boolean pulledAny = false;
 		for (ItemEntity item : items) {
 			ItemStack stack = item.getItem();
@@ -123,11 +152,11 @@ public class HopperhockBlockEntity extends FunctionalFlowerBlockEntity implement
 			int originalCount = stack.getCount();
 
 			for (Map.Entry<Direction, List<ItemStack>> entry : directionFilters.entrySet()) {
-				stack = insertStack(outPos, entry.getKey(), stack, entry.getValue());
+				stack = insertStack(invPositions, entry.getKey(), stack, entry.getValue());
 			}
 
 			for (Direction dir : unfilteredDirections) {
-				stack = insertStack(outPos, dir, stack, List.of());
+				stack = insertStack(invPositions, dir, stack, List.of());
 			}
 
 			if (stack.getCount() < originalCount && item.isAlive()) {
@@ -146,13 +175,12 @@ public class HopperhockBlockEntity extends FunctionalFlowerBlockEntity implement
 		return pulledAny;
 	}
 
-	private ItemStack insertStack(BlockPos outPos, Direction dir, ItemStack stack, List<ItemStack> filter) {
-		BlockPos inventoryPos = outPos.relative(dir);
+	private ItemStack insertStack(Map<Direction, BlockPos> invPositions, Direction dir, ItemStack stack, List<ItemStack> filter) {
+		BlockPos inventoryPos = invPositions.get(dir);
 		Direction sideOfInventory = dir.getOpposite();
-		return XplatAbstractions.INSTANCE.hasInventory(level, inventoryPos, sideOfInventory)
-				&& canAcceptItem(stack, filter, getFilterType())
-						? XplatAbstractions.INSTANCE.insertToInventory(level, inventoryPos, sideOfInventory, stack, false)
-						: stack;
+		return inventoryPos != null && canAcceptItem(stack, filter, getFilterType())
+				? XplatAbstractions.INSTANCE.insertToInventory(level, inventoryPos, sideOfInventory, stack, false)
+				: stack;
 	}
 
 	public static boolean canAcceptItem(ItemStack stack, List<ItemStack> filter, HopperhockFilterType filterType) {
