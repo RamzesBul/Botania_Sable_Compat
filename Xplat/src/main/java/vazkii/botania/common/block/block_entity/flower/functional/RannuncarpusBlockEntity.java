@@ -40,6 +40,7 @@ import org.jetbrains.annotations.Nullable;
 import vazkii.botania.api.block.Wandable;
 import vazkii.botania.api.block_entity.FunctionalFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.item.FlowerPlaceable;
 import vazkii.botania.api.state.BotaniaStateProperties;
 import vazkii.botania.api.state.enums.HopperhockFilterType;
@@ -152,7 +153,12 @@ public class RannuncarpusBlockEntity extends FunctionalFlowerBlockEntity impleme
 	private BlockPlaceContext getBlockPlaceContext(ItemStack stack, BlockPos coords) {
 		BlockHitResult ray = new BlockHitResult(new Vec3(coords.getX() + 0.5, coords.getY() + 1, coords.getZ() + 0.5), Direction.UP,
 				coords, false);
-		return new RannuncarpusPlaceContext(getLevel(), stack, ray, worldPosition);
+		// coords may live on a different level than the flower; express the flower's position in coords' frame so
+		// the placement orientation (dx/dy/dz) is computed in one coordinate space. Round-trips to worldPosition
+		// on the same level / in the regular world.
+		Vec3 flowerWorld = Vec3.atCenterOf(SableCompat.transformFromSable(getLevel(), worldPosition));
+		BlockPos flowerInFrame = BlockPos.containing(SableCompat.toSableLocalFrame(getLevel(), flowerWorld, coords));
+		return new RannuncarpusPlaceContext(getLevel(), stack, ray, flowerInFrame);
 	}
 
 	private BlockPos getFilterPos() {
@@ -172,10 +178,13 @@ public class RannuncarpusBlockEntity extends FunctionalFlowerBlockEntity impleme
 		List<BlockPos> emptyPositions = new ArrayList<>();
 		List<BlockPos> additivePositions = new ArrayList<>();
 
-		BlockPos.MutableBlockPos placementPos = new BlockPos.MutableBlockPos();
 		for (BlockPos pos : MathHelper.aroundPosClosed(center, rangePlace, rangePlaceY)) {
-			BlockState state = getLevel().getBlockState(pos);
-			placementPos.setWithOffset(pos, 0, 1, 0);
+			// Resolve the scan cell to whichever level physically occupies it (own sub-level, the world, or a
+			// neighbouring sub-level), so a flower on a sub-level can place into the surrounding world too.
+			BlockPos groundPos = SableCompat.resolveCellAcrossLevels(getLevel(), center, pos);
+			BlockState state = getLevel().getBlockState(groundPos);
+			// "Above" in the resolved level's own frame: gravity-up in the world, local-up on a sub-level.
+			BlockPos placementPos = groundPos.above();
 			BlockState up = getLevel().getBlockState(placementPos);
 
 			boolean matches;
@@ -187,10 +196,10 @@ public class RannuncarpusBlockEntity extends FunctionalFlowerBlockEntity impleme
 
 			if (matches) {
 				if (isAirOrDifferentReplaceableBlock(up, stack)) {
-					emptyPositions.add(pos.immutable());
+					emptyPositions.add(groundPos);
 				} else if (up.canBeReplaced(getBlockPlaceContext(stack, placementPos))) {
 					// same block type, but can still place more
-					additivePositions.add(pos.immutable());
+					additivePositions.add(groundPos);
 				}
 			}
 		}
