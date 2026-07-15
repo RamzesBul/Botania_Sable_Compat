@@ -18,6 +18,7 @@ import net.minecraft.world.phys.Vec3;
 
 import vazkii.botania.api.block_entity.FunctionalFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.fx.SparkleParticleData;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 import vazkii.botania.common.helper.MathHelper;
@@ -45,9 +46,14 @@ public class TangleberrieBlockEntity extends FunctionalFlowerBlockEntity {
 		if (getMana() <= 0) {
 			return;
 		}
-		double x1 = getEffectivePos().getX() + 0.5;
-		double y1 = getEffectivePos().getY() + 0.5;
-		double z1 = getEffectivePos().getZ() + 0.5;
+		// Mobs are always world-space entities, even when riding a (moving) sub-level: Sable carries them in
+		// world coords while only blocks live in the plot grid. A flower on a sub-level reports getEffectivePos()
+		// in plot-grid coords far from world space, so scanning/pushing from there finds nobody (and would push
+		// along a bogus direction). Work from the flower's world position instead; this is a no-op in the world.
+		Vec3 origin = SableCompat.transformFromSable(getLevel(), Vec3.atCenterOf(getEffectivePos()));
+		double x1 = origin.x;
+		double y1 = origin.y;
+		double z1 = origin.z;
 
 		double maxDist = getMaxDistance();
 		double range = getRange();
