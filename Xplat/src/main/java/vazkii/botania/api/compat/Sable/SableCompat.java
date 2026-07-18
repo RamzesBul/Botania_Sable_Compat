@@ -380,6 +380,25 @@ public class SableCompat {
     }
 
     /**
+     * Rotates a direction vector from the local frame of the sub-level containing {@code anchor} into world
+     * space, applying only the sub-level's orientation (no translation). Returns {@code dir} unchanged when
+     * {@code anchor} is a regular-world block (or Sable is absent).
+     *
+     * <p>Unlike {@link #transformFromSable(Level, Vec3, Vec3)}, which moves a <em>point</em>, this moves a
+     * <em>direction</em>: use it for effects whose facing rotates with the sub-level, e.g. the Daffomill's wind
+     * push, whose {@code Direction.getStep*()} vector is expressed in the flower's local facing and must be
+     * rotated to world space so items are blown the way the (possibly rotated) flower actually points.
+     */
+    public static Vec3 transformDirectionFromSable(Level level, Vec3 dir, BlockPos anchor) {
+        SubLevelAccess sub = SableCompanion.INSTANCE.getContaining(level, anchor);
+        if (sub == null) {
+            return dir;
+        }
+        Vector3d out = sub.logicalPose().orientation().transform(new Vector3d(dir.x, dir.y, dir.z));
+        return new Vec3(out.x, out.y, out.z);
+    }
+
+    /**
      * @return whether {@code targetPos} lies within {@code range} (Chebyshev / cube distance) of
      *         {@code anchorPos} when both are measured in {@code anchorPos}'s coordinate frame. {@code targetPos}
      *         may live on a different sub-level: it is transformed to world space and then into
