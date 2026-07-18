@@ -19,12 +19,14 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.block.Wandable;
 import vazkii.botania.api.block_entity.FunctionalFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.fx.WispParticleData;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 import vazkii.botania.common.helper.NbtHelper;
@@ -63,18 +65,25 @@ public class DaffomillBlockEntity extends FunctionalFlowerBlockEntity implements
 		}
 
 		if (windTicks > 0) {
+			// aabbForOrientation() is the wind box in the flower's own frame (plot-grid coords, oriented by its
+			// local facing). Items are world-space entities even when riding a sub-level, so search the box's
+			// world-space bounds, then confirm each hit against the exact (possibly rotated) local box, and push
+			// along the local facing rotated into world space. All three steps are no-ops in the regular world.
 			AABB axis = aabbForOrientation();
 
 			if (axis != null) {
-				List<ItemEntity> items = getLevel().getEntitiesOfClass(ItemEntity.class, axis,
+				AABB worldBox = SableCompat.transformFromSable(getLevel(), axis);
+				List<ItemEntity> items = getLevel().getEntitiesOfClass(ItemEntity.class, worldBox,
 						itemEntity -> ItemLifetime.canInteractWithImmediate(this, itemEntity));
+				Vec3 push = SableCompat.transformDirectionFromSable(getLevel(),
+						new Vec3(orientation.getStepX(), orientation.getStepY(), orientation.getStepZ()), getEffectivePos());
 				double v = 0.05;
 				for (ItemEntity item : items) {
-					item.setDeltaMovement(
-							item.getDeltaMovement().x() + orientation.getStepX() * v,
-							item.getDeltaMovement().y() + orientation.getStepY() * v,
-							item.getDeltaMovement().z() + orientation.getStepZ() * v
-					);
+					Vec3 local = SableCompat.toSableLocalFrame(getLevel(), item.position(), getEffectivePos());
+					if (!axis.contains(local)) {
+						continue;
+					}
+					item.setDeltaMovement(item.getDeltaMovement().add(push.scale(v)));
 				}
 			}
 
