@@ -18,6 +18,7 @@ import net.minecraft.world.level.gameevent.GameEvent;
 
 import vazkii.botania.api.block_entity.FunctionalFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 import vazkii.botania.common.lib.BotaniaTags;
 import vazkii.botania.xplat.BotaniaConfig;
@@ -61,12 +62,17 @@ public class JadedAmaranthusBlockEntity extends FunctionalFlowerBlockEntity {
 				continue;
 			}
 			BlockState flower = randomFlower.get().value().defaultBlockState();
-			if (getLevel().isEmptyBlock(up) && flower.canSurvive(getLevel(), up)) {
+			// Resolve each column cell to whichever level physically occupies it: cells over the flower's own
+			// sub-level round-trip back to it (grow on the platform), cells past its edge or below resolve to the
+			// world or a neighbouring sub-level (grow there). Without this, a flower on a sub-level only ever
+			// probes plot-grid space and never reaches the surrounding world. A no-op in the plain world.
+			BlockPos target = SableCompat.resolveCellAcrossLevels(getLevel(), getEffectivePos(), up);
+			if (getLevel().isEmptyBlock(target) && flower.canSurvive(getLevel(), target)) {
 				if (BotaniaConfig.common().blockBreakParticles()) {
-					getLevel().levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, up, Block.getId(flower));
+					getLevel().levelEvent(LevelEvent.PARTICLES_DESTROY_BLOCK, target, Block.getId(flower));
 				}
-				getLevel().setBlockAndUpdate(up, flower);
-				getLevel().gameEvent(null, GameEvent.BLOCK_PLACE, up);
+				getLevel().setBlockAndUpdate(target, flower);
+				getLevel().gameEvent(null, GameEvent.BLOCK_PLACE, target);
 				addMana(-COST);
 
 				break;
