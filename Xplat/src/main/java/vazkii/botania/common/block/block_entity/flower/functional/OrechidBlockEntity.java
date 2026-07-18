@@ -24,6 +24,7 @@ import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.block_entity.FunctionalFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.recipe.OrechidRecipe;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 import vazkii.botania.common.component.BotaniaDataComponents;
@@ -119,9 +120,14 @@ public class OrechidBlockEntity extends FunctionalFlowerBlockEntity {
 		List<BlockPos> possibleCoords = new ArrayList<>();
 		var matcher = getReplaceMatcher();
 		for (BlockPos pos : MathHelper.aroundPosClosed(getEffectivePos(), getRange(), getRangeY())) {
-			BlockState state = getLevel().getBlockState(pos);
+			// Resolve each scan cell to whichever level physically occupies it (the flower's own sub-level, the
+			// surrounding world, or a neighbouring sub-level), so a flower on a sub-level can turn stone in the
+			// world (and vice versa) into ore. Sub-level blocks are real chunks at their plot-grid coords, so the
+			// resolved position feeds the recipe/replacement calls unchanged; this is a no-op in the plain world.
+			BlockPos resolved = SableCompat.resolveCellAcrossLevels(getLevel(), getEffectivePos(), pos);
+			BlockState state = getLevel().getBlockState(resolved);
 			if (matcher.test(state)) {
-				possibleCoords.add(pos.immutable());
+				possibleCoords.add(resolved);
 			}
 		}
 
