@@ -90,11 +90,15 @@ repositories {
     }
     maven {
         name = "RyanHCode Maven"
-        url = "https://maven.ryanhcode.dev/releases" // for sable companion
+        url = "https://maven.ryanhcode.dev/releases" // for sable (full mod) and its companion API
         content {
             includeGroup "dev.ryanhcode.sable-companion"
+            includeGroup "dev.ryanhcode.sable"
         }
     }
+    maven { url = "https://maven.createmod.net" } // Create, Flywheel, Ponder (transitive deps of full Sable)
+    maven { url = "https://maven.ithundxr.dev/snapshots" } // Registrate
+    maven { url = "https://maven.realrobotix.me/master" } // Registrate
 }
 
 // Declare capabilities on the outgoing configurations.
