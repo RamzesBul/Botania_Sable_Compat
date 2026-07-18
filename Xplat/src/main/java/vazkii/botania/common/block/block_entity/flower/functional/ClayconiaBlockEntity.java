@@ -23,6 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.block_entity.FunctionalFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 import vazkii.botania.common.helper.MathHelper;
 import vazkii.botania.xplat.BotaniaConfig;
@@ -83,9 +84,14 @@ public class ClayconiaBlockEntity extends FunctionalFlowerBlockEntity {
 		int rangeY = getRangeY();
 
 		for (BlockPos pos : MathHelper.aroundPosClosed(getEffectivePos(), range, rangeY)) {
-			BlockState state = getLevel().getBlockState(pos);
+			// Resolve each scan cell to whichever level physically occupies it (the flower's own sub-level, the
+			// surrounding world, or a neighbouring sub-level), so a flower on a sub-level can turn sand in the
+			// world (and vice versa) into clay. Sub-level blocks are real chunks at their plot-grid coords, so the
+			// resolved position feeds the block break/replace calls unchanged; this is a no-op in the plain world.
+			BlockPos resolved = SableCompat.resolveCellAcrossLevels(getLevel(), getEffectivePos(), pos);
+			BlockState state = getLevel().getBlockState(resolved);
 			if (state.is(BlockTags.SAND)) {
-				possibleCoords.add(pos.immutable());
+				possibleCoords.add(resolved);
 			}
 		}
 
