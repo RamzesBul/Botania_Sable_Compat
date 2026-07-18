@@ -18,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.block_entity.FunctionalFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 import vazkii.botania.common.entity.EnderEssenceCloudEntity;
 import vazkii.botania.common.helper.MathHelper;
@@ -74,37 +75,28 @@ public class VinculotusBlockEntity extends FunctionalFlowerBlockEntity {
 
 		List<VinculotusBlockEntity> possibleFlowers = new ArrayList<>();
 		for (VinculotusBlockEntity flower : existingFlowers) {
-			BlockPos activePos = flower.getEffectivePos();
-
 			if (flower.isPowered() || flower.getMana() <= cost
 					|| flower.getLevel() != entity.level()
 					|| flower.getLevel().getBlockEntity(flower.getBlockPos()) != flower) {
 				continue;
 			}
 
-			double x = activePos.getX() + 0.5;
-			double y = activePos.getY() + 1.5;
-			double z = activePos.getZ() + 0.5;
-
-			if (MathHelper.pointDistanceSpace(x, y, z, targetX, targetY, targetZ) < RANGE) {
+			Vec3 worldPos = teleportTarget(flower);
+			if (MathHelper.pointDistanceSpace(worldPos.x, worldPos.y, worldPos.z, targetX, targetY, targetZ) < RANGE) {
 				possibleFlowers.add(flower);
 			}
 		}
 
 		if (!possibleFlowers.isEmpty()) {
 			VinculotusBlockEntity flower = possibleFlowers.get(entity.level().getRandom().nextInt(possibleFlowers.size()));
-			BlockPos activePos = flower.getEffectivePos();
-
-			double x = activePos.getX() + 0.5;
-			double y = activePos.getY() + 1.5;
-			double z = activePos.getZ() + 0.5;
+			Vec3 worldPos = teleportTarget(flower);
 
 			flower.addMana(-cost);
 
 			// mark it for allowing this teleportation attempt and capturing right after that
 			EnderEssenceCaptured.HOLDER.setFor(entity, false);
 			// Endermen are 0.6 blocks wide, so +/- 1.2 blocks offset should always fit into the 3x3 block target area
-			return new Vec3(x + (Math.random() * 2.4 - 1.2), y, z + (Math.random() * 2.4 - 1.2));
+			return new Vec3(worldPos.x + (Math.random() * 2.4 - 1.2), worldPos.y, worldPos.z + (Math.random() * 2.4 - 1.2));
 		}
 
 		// remove any potential marker that may have been left over from a previous attempt to capture this EnderMan
@@ -137,4 +129,15 @@ public class VinculotusBlockEntity extends FunctionalFlowerBlockEntity {
 		return EnderEssenceCaptured.HOLDER.getOrDefault(entity, false);
 	}
 
+	/**
+	 * World-space point the enderman should be redirected to: the flower's position (with the vanilla +1.5
+	 * vertical offset) translated out of its sub-level via the sub-level pose. Endermen are world-space entities,
+	 * so a flower on a sub-level reports getEffectivePos() in plot-grid coords unrelated to world space — both the
+	 * in-range test and the teleport destination must be computed here instead. A no-op in the regular world.
+	 */
+	private static Vec3 teleportTarget(VinculotusBlockEntity flower) {
+		BlockPos activePos = flower.getEffectivePos();
+		Vec3 localPos = new Vec3(activePos.getX() + 0.5, activePos.getY() + 1.5, activePos.getZ() + 0.5);
+		return SableCompat.transformFromSable(flower.getLevel(), localPos, Vec3.atCenterOf(activePos));
+	}
 }
