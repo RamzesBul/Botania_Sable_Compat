@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.block.Bound;
+import vazkii.botania.api.compat.Sable.SableCompat;
 
 import java.util.Objects;
 
@@ -39,19 +40,25 @@ public abstract class RedStringBlockEntity extends BlockEntity implements Bound 
 
 		for (int i = 0; i < range; i++) {
 			pos_ = pos_.relative(dir);
-			if (level.isEmptyBlock(pos_)) {
+			// Resolve each stepped cell to whichever level physically occupies it, so the binding ray can leave
+			// the block's own sub-level and reach an inventory in the surrounding world (or on a neighbouring
+			// sub-level) that sits in front of it. Sub-level blocks are real chunks at their plot-grid coords, so
+			// the resolved position feeds the block/inventory lookups (and is stored as the binding) unchanged.
+			// A no-op when the block is a regular-world block, leaving same-level binding untouched.
+			BlockPos resolved = SableCompat.resolveCellAcrossLevels(level, self.getBlockPos(), pos_);
+			if (level.isEmptyBlock(resolved)) {
 				continue;
 			}
 
-			BlockEntity tile = level.getBlockEntity(pos_);
+			BlockEntity tile = level.getBlockEntity(resolved);
 			if (tile instanceof RedStringBlockEntity) {
 				continue;
 			}
 
-			if (self.acceptBlock(pos_)) {
-				self.setBinding(pos_);
-				if (!Objects.equals(currBinding, pos_)) {
-					self.onBound(pos_);
+			if (self.acceptBlock(resolved)) {
+				self.setBinding(resolved);
+				if (!Objects.equals(currBinding, resolved)) {
+					self.onBound(resolved);
 				}
 				return;
 			}
