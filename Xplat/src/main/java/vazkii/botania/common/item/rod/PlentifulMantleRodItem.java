@@ -23,6 +23,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 
 import vazkii.botania.api.block.Avatar;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.item.AvatarWieldable;
 import vazkii.botania.api.mana.ManaItemHandler;
 import vazkii.botania.api.mana.ManaReceiver;
@@ -72,8 +73,13 @@ public class PlentifulMantleRodItem extends Item {
 	//  since clients might not know about enclosed blocks in the presence of anti-xray measures
 	//  (but then we'd have to figure out how to transfer potentially a LOT of data in a network packet)
 	public static void doHighlight(Level level, BlockPos centerPos, int range, long seedXor) {
+		// When a sub-level is near the scan, resolve each cell to whichever level physically occupies it (the world,
+		// the avatar's own platform, or a neighbouring sub-level) so ores on sub-levels are highlighted too. Skipped
+		// entirely when no sub-level is around, keeping the plain-world path (and the hand-held rod) unchanged.
+		boolean crossLevel = SableCompat.hasSubLevelContext(level, centerPos, range);
 		for (BlockPos pos : MathHelper.aroundPosClosed(centerPos, range)) {
-			BlockState state = level.getBlockState(pos);
+			BlockPos resolved = crossLevel ? SableCompat.resolveCellAcrossLevels(level, centerPos, pos) : pos;
+			BlockState state = level.getBlockState(resolved);
 
 			Block block = state.getBlock();
 			if (state.is(BotaniaTags.Blocks.ROD_OF_THE_PLENTIFUL_MANTLE_HIGHLIGHTED)) {
@@ -81,10 +87,16 @@ public class PlentifulMantleRodItem extends Item {
 				WispParticleData data = WispParticleData.wisp(0.25F,
 						rand.nextFloat(), rand.nextFloat(), rand.nextFloat(),
 						8, false);
+				// Spawn at the resolved cell's own coords: for a sub-level cell these are plot-grid coords, and
+				// Sable's particle handling kicks the particle into world space and tracks it with the sub-level
+				// (the same path used by flower particles), which positions it correctly. World cells are unchanged.
+				// The in-block offset is added in double precision: a sub-level cell's coords are ~2e7, where a
+				// float's ULP is ~2 blocks, so computing `int + nextFloat()` in float (int+float promotes to float)
+				// would quantise the fraction - and even the integer - away, snapping every wisp to a block seam.
 				level.addParticle(data, true,
-						pos.getX() + level.random.nextFloat(),
-						pos.getY() + level.random.nextFloat(),
-						pos.getZ() + level.random.nextFloat(),
+						resolved.getX() + (double) level.random.nextFloat(),
+						resolved.getY() + (double) level.random.nextFloat(),
+						resolved.getZ() + (double) level.random.nextFloat(),
 						0, 0, 0);
 			}
 		}
@@ -95,8 +107,12 @@ public class PlentifulMantleRodItem extends Item {
 		public void onAvatarUpdate(ServerLevel level, BlockPos pos, ManaReceiver receiver) {
 			if (receiver.getCurrentMana() >= COST && avatar.isEnabled()
 					&& getTimeSinceLastActivation(level) >= COOLDOWN_AVATAR) {
-				XplatAbstractions.instance().sendToNear(level, pos,
-						new RodOfThePlentifulMantleEffectPacket(pos, RANGE_AVATAR, false));
+				// The avatar highlights ores in the surrounding world (like the hand-held rod). Its own position is
+				// in plot-grid coords when it sits on a sub-level, so both the effect target and the scan centre
+				// must be its world position. Identity in the regular world, so vanilla behaviour is unchanged.
+				BlockPos worldPos = SableCompat.transformFromSable(level, pos);
+				XplatAbstractions.instance().sendToNear(level, worldPos,
+						new RodOfThePlentifulMantleEffectPacket(worldPos, RANGE_AVATAR, false));
 				receiver.receiveMana(-COST);
 				setLastActivationTime(level);
 			}
