@@ -12,9 +12,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 import vazkii.botania.api.block_entity.RadiusDescriptor;
 import vazkii.botania.api.block_entity.SpecialFlowerBlockEntity;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.common.block.block_entity.BotaniaBlockEntities;
 
 import java.util.Collections;
@@ -64,8 +66,13 @@ public class SolegnoliaBlockEntity extends SpecialFlowerBlockEntity {
 
 	public static boolean hasSolegnoliaAround(Entity e) {
 		for (var flower : e.level().isClientSide() ? clientFlowers : serverFlowers) {
+			// distToCenterSqr would compare the flower's plot-grid position (when it sits on a sub-level) against
+			// the world-space entity, giving an astronomical distance that never matches. Measure with the
+			// sub-level poses instead so a flower on a sub-level guards world-space items (and vice versa); this
+			// reduces to the plain centre distance in the regular world.
 			if (!flower.isPowered() && flower.getLevel() == e.level()
-					&& flower.getEffectivePos().distToCenterSqr(e.getX(), e.getY(), e.getZ())
+					&& SableCompat.distanceSqr(flower.getLevel(),
+							Vec3.atCenterOf(flower.getEffectivePos()), e.position())
 							<= flower.getRange() * flower.getRange()) {
 				return true;
 			}
