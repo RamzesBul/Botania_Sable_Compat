@@ -31,6 +31,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.block.Avatar;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.item.AvatarWieldable;
 import vazkii.botania.api.mana.ManaItemHandler;
 import vazkii.botania.api.mana.ManaReceiver;
@@ -173,7 +174,11 @@ public class SkiesRodItem extends Item {
 					gameTime - AVATAR_COOLDOWN);
 
 			if (receiver.getCurrentMana() >= COST && avatar.isEnabled()) {
-				AABB aabb = MathHelper.inflateBoxAround(pos, 5, 3);
+				// Players are world-space entities, but an avatar on a sub-level reports its position in plot-grid
+				// coords far from world space; a detection box built there never intersects anyone. Centre it on the
+				// avatar's world position instead. A no-op in the regular world, so vanilla behaviour is unchanged.
+				BlockPos worldPos = SableCompat.transformFromSable(level, pos);
+				AABB aabb = MathHelper.inflateBoxAround(worldPos, 5, 3);
 				List<ServerPlayer> players = level.getPlayers(
 						player -> player.canBeSeenByAnyone() && player.getBoundingBox().intersects(aabb));
 				for (Player player : players) {
