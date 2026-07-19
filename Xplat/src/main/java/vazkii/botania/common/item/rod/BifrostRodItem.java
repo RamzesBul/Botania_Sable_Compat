@@ -28,6 +28,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import vazkii.botania.api.block.Avatar;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.item.AvatarWieldable;
 import vazkii.botania.api.mana.ManaItemHandler;
 import vazkii.botania.api.mana.ManaReceiver;
@@ -85,7 +86,12 @@ public class BifrostRodItem extends SelfReturningItem {
 				previousPos.set(lastX, lastY, lastZ);
 
 				if (!previousPos.equals(pos)) { // Occasionally moving to the next segment stays on the same location, skip it
-					if (!level.isEmptyBlock(pos) && level.getBlockState(pos) != bifrost && count >= 4) {
+					// The ray marches in world coords, but a Sable sub-level's blocks live in plot-grid coords and
+					// only render at this world position, so reading the world cell would see air and let the bridge
+					// pierce the platform. Resolve the cell to whichever level physically occupies it (the sub-level's
+					// plot-grid position, or the world cell unchanged) so the wall check stops the bridge at it.
+					BlockPos solidPos = SableCompat.resolveCellAcrossLevels(level, pos, pos);
+					if (!level.isEmptyBlock(solidPos) && level.getBlockState(solidPos) != bifrost && count >= 4) {
 						break; // Stop placing if you hit a wall (temporary bifrost blocks are fine), but only after 4 segments.
 					}
 					if (level.isOutsideBuildHeight(pos.getY())) {
