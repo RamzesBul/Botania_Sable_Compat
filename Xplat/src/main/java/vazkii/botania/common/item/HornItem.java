@@ -21,6 +21,7 @@ import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gameevent.GameEvent;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.common.block.block_entity.flower.misc.BergamuteBlockEntity;
 import vazkii.botania.common.handler.BotaniaSounds;
 import vazkii.botania.common.helper.MathHelper;
@@ -72,8 +73,15 @@ public abstract class HornItem extends Item {
 		List<BlockPos> coords = new ArrayList<>();
 
 		for (BlockPos pos : MathHelper.aroundPosClosed(srcPos, horn.getRange(), horn.getRangeY())) {
-			if (horn.canHarvest(world, pos) && !BergamuteBlockEntity.isBergamuteNearby(world, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)) {
-				coords.add(pos.immutable());
+			// Resolve each scan cell to whichever level physically occupies it, so a Drum standing on a sub-level
+			// also harvests plants in the surrounding world (and on neighbouring sub-levels), not just its own
+			// plot grid. Sub-level blocks are real chunks at their plot-grid coords, so the resolved position feeds
+			// canHarvest/destroyBlock unchanged. A no-op when srcPos is a regular-world position (e.g. the hand-held
+			// Horn, whose player is always world-space), leaving that behaviour untouched.
+			BlockPos resolved = SableCompat.resolveCellAcrossLevels(world, srcPos, pos);
+			if (horn.canHarvest(world, resolved)
+					&& !BergamuteBlockEntity.isBergamuteNearby(world, resolved.getX() + 0.5, resolved.getY() + 0.5, resolved.getZ() + 0.5)) {
+				coords.add(resolved);
 			}
 		}
 
