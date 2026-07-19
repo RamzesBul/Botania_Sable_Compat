@@ -25,6 +25,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.block.Avatar;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.item.AvatarWieldable;
 import vazkii.botania.api.mana.ManaItemHandler;
 import vazkii.botania.api.mana.ManaReceiver;
@@ -106,14 +107,21 @@ public class UnstableReservoirRodItem extends Item {
 		@Override
 		public void onAvatarUpdate(ServerLevel level, BlockPos pos, ManaReceiver receiver) {
 			if (receiver.getCurrentMana() >= COST_AVATAR && avatar.isEnabled() && getTimeSinceLastActivation(level) >= 3) {
+				// spawnMissile calls findTarget() (a world-space AABB search around the spawn point) before adding
+				// the missile. An avatar on a sub-level reports its position in plot-grid coords far from world
+				// space, so the missile would find no monsters and never spawn. Spawn it at the avatar's world
+				// position so it can acquire a world target and fly to it. A no-op in the regular world.
+				BlockPos worldPos = SableCompat.transformFromSable(level, pos);
+				// The air check stays in the avatar's own (sub-level) frame: it asks whether the block above the
+				// avatar on its platform is open.
 				double yOffset = level.getBlockState(pos.above()).isAir() ? 1.5 : 2.5;
 				if (spawnMissile(level, null,
-						pos.getX() + 0.5 + (level.getRandom().nextDouble() - 0.5) * 0.1,
-						pos.getY() + yOffset + (level.getRandom().nextDouble() - 0.5) * 0.1,
-						pos.getZ() + 0.5 + (level.getRandom().nextDouble() - 0.5) * 0.1)) {
+						worldPos.getX() + 0.5 + (level.getRandom().nextDouble() - 0.5) * 0.1,
+						worldPos.getY() + yOffset + (level.getRandom().nextDouble() - 0.5) * 0.1,
+						worldPos.getZ() + 0.5 + (level.getRandom().nextDouble() - 0.5) * 0.1)) {
 					receiver.receiveMana(-COST_AVATAR);
-					XplatAbstractions.instance().sendToNear(level, pos, new RodOfTheUnstableReservoirEffectPacket(
-							new Vec3(pos.getX() + 0.5, pos.getY() + yOffset, pos.getZ() + 0.5)));
+					XplatAbstractions.instance().sendToNear(level, worldPos, new RodOfTheUnstableReservoirEffectPacket(
+							new Vec3(worldPos.getX() + 0.5, worldPos.getY() + yOffset, worldPos.getZ() + 0.5)));
 				}
 				setLastActivationTime(level);
 			}
