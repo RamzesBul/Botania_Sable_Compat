@@ -22,6 +22,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.core.handler.ClientTickHandler;
 import vazkii.botania.client.core.helper.RenderHelper;
 import vazkii.botania.common.block.block_entity.red_string.RedStringBlockEntity;
@@ -58,7 +59,13 @@ public class RedStringBlockEntityRenderer<T extends RedStringBlockEntity> implem
 		if (bind != null) {
 			ms.pushPose();
 			ms.translate(0.5, 0.5, 0.5);
-			Vec3 span = new Vec3(bind.getX() - tile.getBlockPos().getX(), bind.getY() - tile.getBlockPos().getY(), bind.getZ() - tile.getBlockPos().getZ());
+			// The string is drawn in the block's own frame (the PoseStack already carries its sub-level pose), but
+			// a cross-level binding stores the target in its own frame. Express the target in this block's local
+			// frame so the string points at it: take the target to world space (via its sub-level pose), then into
+			// this block's frame. Both steps are identities on the same level, so world/same-sub-level is unchanged.
+			Vec3 worldBind = SableCompat.transformFromSable(tile.getLevel(), Vec3.atCenterOf(bind));
+			Vec3 localBind = SableCompat.toSableLocalFrame(tile.getLevel(), worldBind, tile.getBlockPos());
+			Vec3 span = localBind.subtract(Vec3.atCenterOf(tile.getBlockPos()));
 			Vec3 step = span.normalize().scale(0.025);
 			Vec3 cur = step;
 
