@@ -132,6 +132,34 @@ public class SableCompat {
     }
 
     /**
+     * @return true if any sub-level intersects the world-space box spanned by {@code cells} (expanded by one
+     *         block), false when the box is empty or no sub-level is near it.
+     *
+     * <p>Used to decide whether a scan whose result depends on sub-level geometry must be repeated: a sub-level
+     * block occupies no world cell (in world coordinates it reads as air), so a check that compares world block
+     * states along a path can never notice it move, appear or disappear. Callers that cache such a scan (e.g. the
+     * Mana Spreader caching which receiver its burst hit) use this to keep re-running it while a sub-level is in
+     * reach, letting the real collision decide again each time instead of trusting a stale result.
+     */
+    public static boolean anySubLevelNear(Level level, List<BlockPos> cells) {
+        if (cells.isEmpty()) {
+            return false;
+        }
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (BlockPos cell : cells) {
+            minX = Math.min(minX, cell.getX());
+            minY = Math.min(minY, cell.getY());
+            minZ = Math.min(minZ, cell.getZ());
+            maxX = Math.max(maxX, cell.getX());
+            maxY = Math.max(maxY, cell.getY());
+            maxZ = Math.max(maxZ, cell.getZ());
+        }
+        BoundingBox3d bounds = new BoundingBox3d(minX - 1, minY - 1, minZ - 1, maxX + 2, maxY + 2, maxZ + 2);
+        return SableCompanion.INSTANCE.getAllIntersecting(level, bounds).iterator().hasNext();
+    }
+
+    /**
      * Resolves the flower's 3x3 fluid-scan cells in world space and returns the plot-grid positions of the
      * cells that are physically occupied by <em>other</em> sub-levels than the one holding the flower.
      *
