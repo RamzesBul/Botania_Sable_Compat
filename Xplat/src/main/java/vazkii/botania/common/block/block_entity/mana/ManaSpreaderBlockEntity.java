@@ -145,6 +145,13 @@ public class ManaSpreaderBlockEntity extends ExposedSimpleInventoryBlockEntity
 	@Nullable
 	private List<PositionProperties> lastTentativeBurst;
 	private boolean invalidTentativeBurst;
+	// Whether a Sable sub-level is in reach of the last scan beam. A sub-level block occupies no world cell, so
+	// the world-block comparison in needsNewBurstSimulation can never notice the sub-level move, or a block on it
+	// appear/disappear, and the cached receiver would go stale (staying bound to a pool that drifted out of the
+	// beam, or ignoring a sub-level block placed across it). While this is set the spreader re-simulates every
+	// tick, so the burst's real collision decides the receiver again each time. False when no sub-level is near,
+	// leaving regular-world spreaders on the vanilla path.
+	private boolean subLevelNearBurst;
 
 	public ManaSpreaderBlockEntity(BlockPos pos, BlockState state) {
 		super(BotaniaBlockEntities.MANA_SPREADER, pos, state, true);
@@ -441,7 +448,9 @@ public class ManaSpreaderBlockEntity extends ExposedSimpleInventoryBlockEntity
 			}
 		}
 
-		return false;
+		// The world-block comparison above cannot see anything change on a sub-level near the beam, so keep
+		// re-simulating while one is in reach and let the burst's real collision re-decide the receiver.
+		return subLevelNearBurst;
 	}
 
 	private void tryShootBurst() {
@@ -493,6 +502,8 @@ public class ManaSpreaderBlockEntity extends ExposedSimpleInventoryBlockEntity
 			this.receiver = null;
 		}
 		lastTentativeBurst = fakeBurst.propsList;
+		subLevelNearBurst = SableCompat.anySubLevelNear(level,
+				fakeBurst.propsList.stream().map(PositionProperties::coords).toList());
 	}
 
 	@Override
