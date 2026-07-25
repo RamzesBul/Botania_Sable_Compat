@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "botania:corporea_spark",
-    "botania:ring_of_flame"
+    "botania:flame_ring",
+    "botania:mana_burst"
   ]
 }
