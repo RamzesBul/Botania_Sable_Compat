@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import dev.ryanhcode.sable.companion.ClientSubLevelAccess;
 import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
+import dev.ryanhcode.sable.api.entity.EntitySubLevelUtil;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
 import dev.ryanhcode.sable.companion.math.BoundingBox3ic;
 import dev.ryanhcode.sable.companion.math.Pose3dc;
@@ -21,7 +22,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3d;
 
@@ -278,18 +278,6 @@ public class SableCompat {
     }
 
     /**
-     * Decides whether a burst that is still travelling in the local space of the sub-level containing
-     * {@code sourcePos} has now left that sub-level's world bounds, and if so returns the world-space
-     * position and velocity to continue with.
-     *
-     * <p>A real burst starts life on the sub-level (logical coords) so it moves together with the
-     * (possibly moving) sub-level and can hit pools on it. Once it leaves the sub-level's bounds it would
-     * otherwise freeze in unloaded plot chunks, so we project it into world space to finish its flight.
-     *
-     * @return {@code [worldPosition, worldVelocity]} when the burst should be projected out, or
-     *         {@code null} when it is still over the sub-level (or {@code sourcePos} is not on a sub-level).
-     */
-    /**
      * Recomputes the world bounding box of the sub-level containing {@code pos} from its current pose.
      * Sable's raycast override finds the sub-levels a ray crosses via {@code getAllIntersecting}, which
      * tests each sub-level's cached world bounding box. On a fast-moving sub-level that box can lag the
@@ -302,24 +290,41 @@ public class SableCompat {
         }
     }
 
-    @Nullable
-    public static Vec3[] projectBurstOutOfSubLevel(Level level, BlockPos sourcePos, Vec3 localPos, Vec3 localVel) {
+    /**
+     * Whether {@code point} lies in the plot slot of the sub-level containing {@code sourcePos}, i.e. whether
+     * it is expressed in that sub-level's logical (plot-grid) coordinates rather than in world ones. Sable
+     * keeps an entity in the sub-level's local space only while its type is in {@code #sable:retain_in_sub_level};
+     * otherwise it relocates the entity to world space as it is added to the level. This tells the two apart
+     * without guessing, since world coordinates can never fall inside a plot slot.
+     */
+    public static boolean isInSubLevelFrame(Level level, BlockPos sourcePos, Vec3 point) {
+        return SableCompanion.INSTANCE.getContaining(level, sourcePos) instanceof SubLevel subLevel
+                && subLevel.getPlot().contains(point);
+    }
+
+    /**
+     * Whether {@code localPoint} (logical coords) is still within the built bounds of the sub-level containing
+     * {@code sourcePos}. Compares logical position to logical bounds: both are independent of the sub-level's
+     * pose, so a fast-moving sub-level cannot desync the check the way a world-space comparison would.
+     * {@code true} when {@code sourcePos} is not on a sub-level, or its bounds are not known yet.
+     */
+    public static boolean isOverSubLevel(Level level, BlockPos sourcePos, Vec3 localPoint) {
         if (!(SableCompanion.INSTANCE.getContaining(level, sourcePos) instanceof SubLevel subLevel)) {
-            return null;
+            return true;
         }
-        // Compare the burst's own (logical/plot-grid) position to the plot's logical bounds. Both are
-        // independent of the sub-level's pose, so a fast-moving sub-level cannot desync the check.
-        // Comparing the world position to the world bounding box could: they are recomputed from the pose
-        // each tick, and a one-tick pose lag on a fast sub-level pushes the point out of the box, projecting
-        // the burst before it reached the pool.
-        BoundingBox3ic plotBounds = subLevel.getPlot().getBoundingBox();
-        if (plotBounds == null || plotBounds.contains(new Vector3d(localPos.x, localPos.y, localPos.z))) {
-            return null; // still inside the sub-level (or bounds unknown: stay local)
+        BoundingBox3ic bounds = subLevel.getPlot().getBoundingBox();
+        return bounds == null || bounds.contains(new Vector3d(localPoint.x, localPoint.y, localPoint.z));
+    }
+
+    /**
+     * Hands {@code entity} to Sable to be kicked out of the sub-level containing {@code sourcePos}: its position,
+     * velocity and facing are transformed from the sub-level's logical space into world space, and the sub-level's
+     * own velocity is added on, so an entity leaving a moving platform keeps the platform's momentum.
+     */
+    public static void kickOutOfSubLevel(Level level, BlockPos sourcePos, Entity entity) {
+        if (SableCompanion.INSTANCE.getContaining(level, sourcePos) instanceof SubLevel subLevel) {
+            EntitySubLevelUtil.kickEntity(subLevel, entity);
         }
-        Pose3dc pose = subLevel.logicalPose();
-        Vec3 worldPos = pose.transformPosition(localPos);
-        Vector3d worldVel = pose.orientation().transform(new Vector3d(localVel.x, localVel.y, localVel.z));
-        return new Vec3[] { worldPos, new Vec3(worldVel.x, worldVel.y, worldVel.z) };
     }
 
     public static BlockPos transformFromSable(Level level, BlockPos pos, BlockPos root) {

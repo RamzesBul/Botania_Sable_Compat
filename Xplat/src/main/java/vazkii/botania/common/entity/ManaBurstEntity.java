@@ -73,7 +73,7 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 	private static final String TAG_LAST_COLLISION_Y = "lastCollisionY";
 	private static final String TAG_LAST_COLLISION_Z = "lastCollisionZ";
 	private static final String TAG_WARPED = "warped";
-	private static final String TAG_WORLD_PROJECTED = "worldProjected";
+	private static final String TAG_IN_SUB_LEVEL_FRAME = "inSubLevelFrame";
 	private static final String TAG_ORBIT_TIME = "orbitTime";
 	private static final String TAG_TRIPPED = "tripped";
 	private static final String TAG_MAGNETIZE_POS = "magnetizePos";
@@ -92,11 +92,9 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 
 	private float accumulatedManaLoss = 0;
 	private boolean fake = false;
-	// True for a real burst fired by a spreader on a Sable sub-level: the burst lives in world space (so it
-	// never freezes in unloaded plot chunks) while its source position stays in the sub-level's logical
-	// coords. Sable's clip override still lets it collide with sub-level blocks (hits come back in logical
-	// coords). See ManaSpreaderBlockEntity#getBurst.
-	private boolean worldProjected = false;
+	// True while the burst is travelling in the logical (plot-grid) space of the Sable sub-level that fired it.
+	// Gates the kick into world space to a single inside->outside transition; see tick().
+	private boolean inSubLevelFrame = false;
 	private final Set<BlockPos> alreadyCollidedAt = new HashSet<>();
 	private boolean fullManaLastTick = true;
 	@Nullable
@@ -178,16 +176,21 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 
 		super.tick();
 
-		// A real burst stays in its sub-level's local space (moving with the sub-level, able to hit pools
-		// on it) until it leaves the sub-level's bounds; then project it into world space so it doesn't
-		// freeze in the unloaded plot chunks beyond the sub-level.
-		if (!worldProjected && !fake && !level().isClientSide()) {
+		// A burst fired by a spreader on a Sable sub-level travels in that sub-level's logical space (Sable keeps
+		// it there because botania:mana_burst is in #sable:retain_in_sub_level), so it moves along with a moving
+		// platform and can hit blocks on it. Sable never kicks a retained entity out on its own, so once the burst
+		// leaves the platform's bounds we ask it to, otherwise the burst would freeze in the unloaded plot chunks
+		// beyond. Deliberately edge-triggered: the kick only ever runs for a burst that was first seen inside the
+		// plot, so a burst already living in world space cannot have the sub-level's pose applied to it a second
+		// time (which would fling it millions of blocks away).
+		if (!fake && !level().isClientSide()) {
 			getBurstSourcePosition().ifPresent(src -> {
-				Vec3[] projected = SableCompat.projectBurstOutOfSubLevel(level(), src.pos(), position(), getDeltaMovement());
-				if (projected != null) {
-					moveTo(projected[0].x, projected[0].y, projected[0].z, getYRot(), getXRot());
-					setDeltaMovement(projected[1].x, projected[1].y, projected[1].z);
-					setWorldProjected(true);
+				if (!inSubLevelFrame) {
+					inSubLevelFrame = SableCompat.isInSubLevelFrame(level(), src.pos(), position());
+				}
+				if (inSubLevelFrame && !SableCompat.isOverSubLevel(level(), src.pos(), position())) {
+					SableCompat.kickOutOfSubLevel(level(), src.pos(), this);
+					inSubLevelFrame = false;
 				}
 			});
 		}
@@ -311,7 +314,7 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 			tag.putUUID(TAG_SHOOTER, identity);
 		}
 		tag.putBoolean(TAG_WARPED, warped);
-		tag.putBoolean(TAG_WORLD_PROJECTED, worldProjected);
+		tag.putBoolean(TAG_IN_SUB_LEVEL_FRAME, inSubLevelFrame);
 		tag.putInt(TAG_ORBIT_TIME, orbitTime);
 		tag.putBoolean(TAG_TRIPPED, tripped);
 		if (magnetizePos != null) {
@@ -384,7 +387,7 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 			}
 		}
 		warped = cmp.getBoolean(TAG_WARPED);
-		worldProjected = cmp.getBoolean(TAG_WORLD_PROJECTED);
+		inSubLevelFrame = cmp.getBoolean(TAG_IN_SUB_LEVEL_FRAME);
 		orbitTime = cmp.getInt(TAG_ORBIT_TIME);
 		tripped = cmp.getBoolean(TAG_TRIPPED);
 		if (cmp.contains(TAG_MAGNETIZE_POS)) {
@@ -553,7 +556,7 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 			return;
 		}
 
-		if (!hasLeftSource() && isBurstSourcePosition(collidePos)) {
+		if (!hasLeftSource() && matchesBurstSource(collidePos)) {
 			return;
 		}
 
@@ -753,26 +756,25 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 		entityData.set(SOURCE_COORDS, Optional.ofNullable(pos));
 	}
 
-	public boolean isWorldProjected() {
-		return worldProjected;
-	}
-
-	public void setWorldProjected(boolean worldProjected) {
-		this.worldProjected = worldProjected;
+	/**
+	 * Whether {@code pos} is this burst's source block, accepting either coordinate space. A burst fired
+	 * from a sub-level spreader has its source stored in logical (plot-grid) coords, but the burst itself
+	 * and the positions coming back from collision raycasts may already be in world space, since Sable
+	 * relocates an entity into world space as it is added to the level. Comparing against both the logical
+	 * and the transformed world position is frame-agnostic; outside a sub-level the two are identical, so
+	 * world behaviour is unchanged.
+	 */
+	private boolean matchesBurstSource(BlockPos pos) {
+		return getBurstSourcePosition()
+				.map(src -> pos.equals(src.pos()) || pos.equals(SableCompat.transformFromSable(level(), src.pos())))
+				.orElse(false);
 	}
 
 	/**
-	 * Whether the burst is still sitting on its source block. For a world-projected sub-level burst the
-	 * burst position is in world space while the source is in logical coords, so compare against the
-	 * source's world position; otherwise the plain (same-space) comparison is correct.
+	 * Whether the burst is still sitting on its source block.
 	 */
 	private boolean isAtSourceBlock() {
-		if (worldProjected) {
-			return getBurstSourcePosition()
-					.map(src -> blockPosition().equals(SableCompat.transformFromSable(level(), src.pos())))
-					.orElse(false);
-		}
-		return isBurstSourcePosition(blockPosition());
+		return matchesBurstSource(blockPosition());
 	}
 
 	@Override
