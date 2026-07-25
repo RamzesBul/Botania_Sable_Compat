@@ -29,6 +29,10 @@ dependencies {
     compileOnly(libs.jetbrains.annotations)
 
     api "dev.ryanhcode.sable:sable-neoforge-${project.minecraft_version}:${project.sable_version}"
+    // Sable pulls this in transitively, but with an open-ended "[1.6.0,)" range that Gradle can only resolve
+    // over the network. Declaring it explicitly pins the version and keeps the dev.ryanhcode.sable.companion.*
+    // classes on the IDE's classpath even when the dynamic-version cache has expired.
+    api "dev.ryanhcode.sable-companion:sable-companion-common-${project.minecraft_version}:${project.sable_companion_version}"
 }
 
 tasks.register("normalizeLanguageFiles", JavaExec) {
