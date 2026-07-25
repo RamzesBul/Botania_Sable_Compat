@@ -92,6 +92,8 @@ dependencies {
 
     // Sable
     api("dev.ryanhcode.sable:sable-neoforge-${project.minecraft_version}:${project.sable_version}")
+    // See Xplat/build.gradle: pinned explicitly instead of relying on Sable's open-ended transitive range.
+    api("dev.ryanhcode.sable-companion:sable-companion-common-${project.minecraft_version}:${project.sable_companion_version}")
 
     implementation("com.simibubi.create:create-${minecraft_version}:${create_neoforge_version}:slim") { transitive = false }
     implementation("net.createmod.ponder:ponder-neoforge:${ponder_neoforge_version}+mc${minecraft_version}")
