@@ -35,6 +35,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.item.Relic;
 import vazkii.botania.api.item.SequentialBreaker;
 import vazkii.botania.api.item.WireframeCoordinateListProvider;
@@ -83,6 +84,20 @@ public class RingOfLokiItem extends RelicBaubleItem implements WireframeCoordina
 		BlockPos hit = lookPos.getBlockPos();
 		if (stack.isEmpty() && hand == InteractionHand.MAIN_HAND) {
 			GlobalPos originCoords = getBindingCenter(lokiRing);
+			// A block on a Sable sub-level is stored in plot-grid coordinates unrelated to world space, so an
+			// offset taken from it would be meaningless anywhere else. Refuse to select one, both as the origin
+			// and as a cursor. Checked on both sides so client and server agree on the resulting state. Leaving
+			// binding mode is deliberately still allowed, so a ring whose origin already sits on a sub-level can
+			// always be reset by clicking that origin again.
+			boolean leavingBindingMode = originCoords != null
+					&& originCoords.dimension() == world.dimension()
+					&& originCoords.pos().equals(hit);
+			if (!leavingBindingMode && SableCompat.isOnSubLevel(world, hit)) {
+				if (world.isClientSide) {
+					player.displayClientMessage(Component.translatable("botaniamisc.lokiRingSubLevel"), true);
+				}
+				return InteractionResult.PASS;
+			}
 			if (!world.isClientSide) {
 				if (originCoords == null || originCoords.dimension() != world.dimension()) {
 					// Initiate a new pending list of positions
@@ -111,6 +126,15 @@ public class RingOfLokiItem extends RelicBaubleItem implements WireframeCoordina
 
 			return InteractionResult.SUCCESS;
 		} else {
+			// Cursors are offsets in world coordinates, so applying them to a block on a sub-level would scatter
+			// the pattern across plot-grid space instead of the platform the player is aiming at. Leave the ring
+			// out of it; the single block under the cursor is still placed by the regular interaction.
+			if (!cursors.isEmpty() && SableCompat.isOnSubLevel(world, hit)) {
+				if (world.isClientSide) {
+					player.displayClientMessage(Component.translatable("botaniamisc.lokiRingSubLevel"), true);
+				}
+				return InteractionResult.PASS;
+			}
 			int numCursors = cursors.size();
 			// particularly large cursor counts can overflow after exponentiation
 			int cost = numCursors > 10 ? numCursors : Math.min(numCursors, (int) Math.pow(Math.E, numCursors * 0.25));
