@@ -139,6 +139,7 @@
   "botaniamisc.rannuncarpus.state_sensitive": "Match Exact State",
   "botaniamisc.rannuncarpus.state_insensitive": "Match Block Only",
   "botaniamisc.lokiRingLimitReached": "Selection limit reached",
+  "botaniamisc.lokiRingSubLevel": "The Ring of Loki can't be used on a sub-level",
   "botaniamisc.loonium.not_attuned": "Not attuned",
   "botaniamisc.loonium.attuned": "Attuned",
   "botaniamisc.loonium.attuned_one": "Attuned to structure: %s",
