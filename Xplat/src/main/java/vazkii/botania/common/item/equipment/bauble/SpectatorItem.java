@@ -39,7 +39,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.phys.AABB;
 
+import org.jetbrains.annotations.Nullable;
+
 import vazkii.botania.api.BotaniaAPI;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.client.core.handler.MiscellaneousModels;
 import vazkii.botania.client.fx.WispParticleData;
 import vazkii.botania.client.render.AccessoryRenderRegistry;
@@ -49,6 +52,7 @@ import vazkii.botania.common.helper.DataComponentHelper;
 import vazkii.botania.common.proxy.Proxy;
 import vazkii.botania.mixin.AbstractHorseAccessor;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -105,9 +109,25 @@ public class SpectatorItem extends BaubleItem {
 		List<BlockPos> blocks = stack.getOrDefault(BotaniaDataComponents.SPECTATOR_HIGHLIGHT_BLOCKS, Collections.emptyList());
 
 		for (BlockPos pos : blocks) {
-			float m = 0.02F;
+			double m = 0.02;
 			WispParticleData data = WispParticleData.wisp(0.15F + 0.05F * (float) Math.random(), (float) Math.random(), (float) Math.random(), (float) Math.random(), false);
-			player.level().addParticle(data, pos.getX() + (float) Math.random(), pos.getY() + (float) Math.random(), pos.getZ() + (float) Math.random(), m * (float) (Math.random() - 0.5), m * (float) (Math.random() - 0.5), m * (float) (Math.random() - 0.5));
+			// Deliberately double: a highlighted block on a Sable sub-level sits at plot-grid coordinates around 2e7,
+			// where a float's ULP is about two blocks, so the random spread would collapse into a single corner.
+			double x = pos.getX() + Math.random();
+			double y = pos.getY() + Math.random();
+			double z = pos.getZ() + Math.random();
+			double vx = m * (Math.random() - 0.5);
+			double vy = m * (Math.random() - 0.5);
+			double vz = m * (Math.random() - 0.5);
+			if (SableCompat.isPlotGridPos(player.level(), pos)) {
+				// Those coordinates are millions of blocks from the camera, so the vanilla distance cull would drop the
+				// particle outright. This tests visibility against the world position instead and spawns forcibly at the
+				// raw one, letting Sable's particle kick-out keep it tracking the sub-level. Regular-world blocks stay
+				// on the plain path, which still honors the client's particle level setting.
+				Proxy.INSTANCE.addParticleForceNear(player.level(), data, x, y, z, vx, vy, vz);
+			} else {
+				player.level().addParticle(data, x, y, z, vx, vy, vz);
+			}
 		}
 
 		List<Integer> entities = stack.getOrDefault(BotaniaDataComponents.SPECTATOR_HIGHLIGHT_ENTITIES, Collections.emptyList());
@@ -190,10 +210,25 @@ public class SpectatorItem extends BaubleItem {
 		if (mainHandStack.isEmpty() && offHandStack.isEmpty()) {
 			return List.of();
 		}
-		return BlockPos.betweenClosedStream(new AABB(player.blockPosition()).inflate(RANGE_BLOCKS))
-				.filter(pos -> scanBlock(player, pos, mainHandStack, offHandStack))
-				.map(BlockPos::immutable)
-				.toList();
+		Level level = player.level();
+		List<BlockPos> positions = new ArrayList<>(
+				BlockPos.betweenClosedStream(new AABB(player.blockPosition()).inflate(RANGE_BLOCKS))
+						.filter(pos -> scanBlock(player, pos, mainHandStack, offHandStack))
+						.map(BlockPos::immutable)
+						.toList());
+
+		// Blocks on a Sable sub-level live at plot-grid coordinates unrelated to world space, so the world-space box
+		// above cannot see them even when the platform is right next to the player - or under their feet, since the
+		// player themselves is always in world space. Walk the block entities of the nearby sub-levels instead: those
+		// are what a container scan is after anyway, which is far cheaper than resolving every cell of the box.
+		SableCompat.forEachBlockEntityInNearbySubLevels(level, player.position(), RANGE_BLOCKS, (pos, blockEntity) -> {
+			if (SableCompat.isWithinRange(level, player.blockPosition(), pos, RANGE_BLOCKS)
+					&& holdsRequestedItem(blockEntity, mainHandStack, offHandStack)) {
+				positions.add(pos.immutable());
+			}
+		});
+
+		return positions;
 	}
 
 	private boolean scanBlock(Player player, BlockPos pos, ItemStack mainHandStack, ItemStack offHandStack) {
@@ -201,7 +236,10 @@ public class SpectatorItem extends BaubleItem {
 		if (!level.isLoaded(pos) || !level.getBlockState(pos).hasBlockEntity()) {
 			return false;
 		}
-		BlockEntity blockEntity = level.getBlockEntity(pos);
+		return holdsRequestedItem(level.getBlockEntity(pos), mainHandStack, offHandStack);
+	}
+
+	private boolean holdsRequestedItem(@Nullable BlockEntity blockEntity, ItemStack mainHandStack, ItemStack offHandStack) {
 		return blockEntity instanceof Container inv && (!(blockEntity instanceof RandomizableContainerBlockEntity lootInv)
 				|| lootInv.getLootTable() == null)
 				&& scanInventory(inv, mainHandStack, offHandStack);
