@@ -30,6 +30,7 @@ import net.minecraft.world.phys.Vec3;
 
 import org.jetbrains.annotations.Nullable;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.item.CoordBoundItem;
 import vazkii.botania.api.item.Relic;
 import vazkii.botania.api.mana.ManaItemHandler;
@@ -60,9 +61,12 @@ public class EyeOfTheFlugelItem extends RelicItem {
 		if (player != null && player.isSecondaryUseActive()) {
 			if (world.isClientSide) {
 				for (int i = 0; i < 10; i++) {
-					float x1 = (float) (pos.getX() + Math.random());
-					float y1 = pos.getY() + 1;
-					float z1 = (float) (pos.getZ() + Math.random());
+					// Deliberately double: a block on a Sable sub-level sits at plot-grid coordinates around 2e7,
+					// where a float's ULP is about two blocks, so rounding these down to float would collapse the
+					// whole random spread into a single corner of the block.
+					double x1 = pos.getX() + Math.random();
+					double y1 = pos.getY() + 1;
+					double z1 = pos.getZ() + Math.random();
 					WispParticleData data = WispParticleData.wisp((float) Math.random() * 0.5F, (float) Math.random(), (float) Math.random(), (float) Math.random(), 1);
 					world.addParticle(data, x1, y1, z1, 0, 0.05F - (float) Math.random() * 0.05F, 0);
 				}
@@ -72,6 +76,7 @@ public class EyeOfTheFlugelItem extends RelicItem {
 						BotaniaDataComponents.BOUND_POSITIONS, Collections.emptyMap()));
 				boundPositions.put(world.dimension().location(), pos);
 				stack.set(BotaniaDataComponents.BOUND_POSITIONS, boundPositions);
+				setSubLevelAnchor(stack, world, pos);
 				world.playSound(null, player.getX(), player.getY(), player.getZ(), BotaniaSounds.EYE_OF_THE_FLUGEL_BIND, SoundSource.PLAYERS, 1F, 1F);
 			}
 
@@ -98,6 +103,53 @@ public class EyeOfTheFlugelItem extends RelicItem {
 				.get(level.dimension().location());
 	}
 
+	@Nullable
+	private static UUID getSubLevelAnchor(ItemStack stack, Level level) {
+		return stack.getOrDefault(BotaniaDataComponents.BOUND_SUB_LEVEL_ANCHORS, Map.<ResourceLocation, UUID>of())
+				.get(level.dimension().location());
+	}
+
+	private static void setBoundPosInDimension(ItemStack stack, Level level, BlockPos pos) {
+		if (pos.equals(getBoundPosInDimension(stack, level))) {
+			// Written on every tick otherwise, and this one is persisted.
+			return;
+		}
+		Map<ResourceLocation, BlockPos> boundPositions = new HashMap<>(stack.getOrDefault(
+				BotaniaDataComponents.BOUND_POSITIONS, Collections.emptyMap()));
+		boundPositions.put(level.dimension().location(), pos);
+		stack.set(BotaniaDataComponents.BOUND_POSITIONS, boundPositions);
+	}
+
+	/**
+	 * Points the binding for the current dimension at a fresh Sable tracking point. The bound {@link BlockPos} alone
+	 * cannot survive a sub-level: its plot-grid coordinates are re-assigned every time the platform is assembled, and a
+	 * world position stops meaning anything the moment those blocks are assembled into one. The tracking point is what
+	 * Sable carries through both, and the position is refreshed from it in {@link #inventoryTick}. Registered for
+	 * regular-world blocks as well, since whether a platform will later be built around one cannot be known here. Any
+	 * point the binding held before is dropped, as nothing would resolve it any more.
+	 */
+	private static void setSubLevelAnchor(ItemStack stack, Level level, BlockPos pos) {
+		ResourceLocation dimension = level.dimension().location();
+		Map<ResourceLocation, UUID> anchors = new HashMap<>(stack.getOrDefault(
+				BotaniaDataComponents.BOUND_SUB_LEVEL_ANCHORS, Collections.emptyMap()));
+
+		UUID previous = anchors.remove(dimension);
+		if (previous != null) {
+			SableCompat.removeSubLevelAnchor(level, previous);
+		}
+
+		UUID anchor = SableCompat.createSubLevelAnchor(level, pos);
+		if (anchor != null) {
+			anchors.put(dimension, anchor);
+		}
+
+		if (anchors.isEmpty()) {
+			stack.remove(BotaniaDataComponents.BOUND_SUB_LEVEL_ANCHORS);
+		} else {
+			stack.set(BotaniaDataComponents.BOUND_SUB_LEVEL_ANCHORS, anchors);
+		}
+	}
+
 	@Override
 	public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
 		super.inventoryTick(stack, level, entity, slotId, isSelected);
@@ -107,10 +159,32 @@ public class EyeOfTheFlugelItem extends RelicItem {
 		if (!Objects.equals(dimension, knownDimension)) {
 			stack.set(BotaniaDataComponents.LOCAL_DIMENSION, dimension);
 		}
+		// Re-home a sub-level binding onto wherever its tracking point ended up: the plot-grid coordinates of a
+		// sub-level's blocks are re-assigned every time it is assembled, so the stored position goes stale as soon as
+		// the platform is rebuilt, while the tracking point follows the structure. While the platform is taken apart the
+		// point sits in the regular world and the binding reads as a plain world one - but the point is deliberately
+		// kept, since that is exactly what Sable re-homes into the new plot when those blocks are assembled again.
+		if (!level.isClientSide()) {
+			UUID anchor = getSubLevelAnchor(stack, level);
+			if (anchor != null) {
+				SableCompat.SubLevelAnchor resolved = SableCompat.resolveSubLevelAnchor(level, anchor);
+				// A null resolve means the sub-level cannot be reached right now; leave the last known position alone.
+				if (resolved != null) {
+					setBoundPosInDimension(stack, level, resolved.localPos() != null
+							? resolved.localPos()
+							: BlockPos.containing(resolved.worldPos()));
+				}
+			}
+		}
+
+		// Cached for the tooltip only. A binding on a Sable sub-level is stored in that sub-level's plot-grid
+		// coordinates, which would read as nonsense there, so cache where the bound block currently is in the world
+		// instead. Block granularity keeps this from re-syncing every tick while a sub-level drifts.
 		BlockPos boundPos = getBoundPosInDimension(stack, level);
+		BlockPos displayPos = boundPos == null ? null : SableCompat.transformFromSable(level, boundPos);
 		BlockPos knownBoundPos = stack.get(BotaniaDataComponents.LOCAL_BOUND_POSITION);
-		if (!Objects.equals(boundPos, knownBoundPos)) {
-			DataComponentHelper.setOptional(stack, BotaniaDataComponents.LOCAL_BOUND_POSITION, boundPos);
+		if (!Objects.equals(displayPos, knownBoundPos)) {
+			DataComponentHelper.setOptional(stack, BotaniaDataComponents.LOCAL_BOUND_POSITION, displayPos);
 		}
 	}
 
@@ -125,26 +199,62 @@ public class EyeOfTheFlugelItem extends RelicItem {
 			return stack;
 		}
 		BlockPos loc = getBoundPosInDimension(stack, level);
+
+		// The binding is resolved through its Sable tracking point rather than through the stored position, which may be
+		// a tick behind the blocks being assembled or dismantled. The point resolves either to a plot-grid position on
+		// the sub-level currently holding it, or to a plain world one while those blocks are not assembled. When it
+		// cannot be resolved at all, fall through on the stored position and let the guard below judge it.
+		UUID anchor = getSubLevelAnchor(stack, level);
+		if (anchor != null) {
+			SableCompat.SubLevelAnchor resolved = SableCompat.resolveSubLevelAnchor(level, anchor);
+			if (resolved != null) {
+				loc = resolved.localPos() != null ? resolved.localPos() : BlockPos.containing(resolved.worldPos());
+			}
+		}
+
 		if (loc == null) {
 			return stack;
 		}
 
-		int x = loc.getX();
-		int y = loc.getY();
-		int z = loc.getZ();
+		// The binding may sit on a Sable sub-level, in which case it is stored in that sub-level's plot-grid
+		// coordinates: unrelated to world space, but stable as the platform moves. If the sub-level is gone or
+		// unloaded there is no pose to resolve them with, and using them raw would throw the player millions of
+		// blocks away - refuse instead, without charging any mana.
+		if (SableCompat.isPlotGridPos(level, loc) && !SableCompat.isOnSubLevel(level, loc)) {
+			if (livingEntity instanceof Player player) {
+				player.displayClientMessage(Component.translatable("botaniamisc.flugelSubLevelMissing"), true);
+			}
+			return stack;
+		}
 
-		int cost = (int) (MathHelper.pointDistanceSpace(x + 0.5, y + 0.5, z + 0.5,
+		// Resolved through the sub-level's current pose, so both the cost and the destination follow the platform.
+		// The 1.5 offset is applied before the transform, i.e. in the sub-level's own frame, so the player lands
+		// above the bound block as the platform sees it rather than as the world does. No-op for a world binding.
+		Vec3 costPos = toWorldSpace(level, loc, 0.5);
+		Vec3 target = toWorldSpace(level, loc, 1.5);
+
+		int cost = (int) (MathHelper.pointDistanceSpace(costPos.x, costPos.y, costPos.z,
 				livingEntity.getX(), livingEntity.getY(), livingEntity.getZ()) * 10);
 
 		if (!(livingEntity instanceof Player player) || ManaItemHandler.instance().requestManaExact(stack, player, cost, true)) {
 			moveParticlesAndSound(livingEntity);
 			Vec3 sourcePos = livingEntity.position();
-			livingEntity.teleportTo(x + 0.5, y + 1.5, z + 0.5);
+			livingEntity.teleportTo(target.x, target.y, target.z);
 			level.gameEvent(livingEntity, GameEvent.TELEPORT, sourcePos);
 			moveParticlesAndSound(livingEntity);
 		}
 
 		return stack;
+	}
+
+	/**
+	 * Translates a point expressed in the coordinate frame of {@code loc} - the frame of the Sable sub-level holding
+	 * the bound block, or plain world coordinates - into world space, offsetting {@code dy} blocks up along that
+	 * frame's own vertical. Returns the plain world point when {@code loc} is a regular-world block.
+	 */
+	private static Vec3 toWorldSpace(Level level, BlockPos loc, double dy) {
+		Vec3 local = new Vec3(loc.getX() + 0.5, loc.getY() + dy, loc.getZ() + 0.5);
+		return SableCompat.transformFromSable(level, local, Vec3.atCenterOf(loc));
 	}
 
 	private static void moveParticlesAndSound(Entity entity) {

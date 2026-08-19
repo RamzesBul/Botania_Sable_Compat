@@ -216,6 +216,12 @@ public class BotaniaDataComponents {
 	public static final DataComponentType<Map<ResourceLocation, BlockPos>> BOUND_POSITIONS = make(LibComponentNames.BOUND_POSITIONS,
 			builder -> builder.persistent(Codec.unboundedMap(ResourceLocation.CODEC, BlockPos.CODEC)).cacheEncoding()
 					.networkSynchronized(ByteBufCodecs.map(HashMap::new, ResourceLocation.STREAM_CODEC, BlockPos.STREAM_CODEC)));
+	// Sable tracking points backing the bindings above, per dimension: a binding to a block on a sub-level cannot be
+	// kept as a plain position, since a sub-level's plot-grid coordinates are re-assigned every time its blocks are
+	// assembled. Sable tracks such a point across (dis)assembly, unloading and saving for us; see SableCompat.
+	public static final DataComponentType<Map<ResourceLocation, UUID>> BOUND_SUB_LEVEL_ANCHORS = make(LibComponentNames.BOUND_SUB_LEVEL_ANCHORS,
+			builder -> builder.persistent(Codec.unboundedMap(ResourceLocation.CODEC, UUIDUtil.CODEC)).cacheEncoding()
+					.networkSynchronized(ByteBufCodecs.map(HashMap::new, ResourceLocation.STREAM_CODEC, UUIDUtil.STREAM_CODEC)));
 	// non-authoritative data copies for the current dimension (for tooltip rendering)
 	public static final DataComponentType<BlockPos> LOCAL_BOUND_POSITION = make(LibComponentNames.LOCAL_BOUND_POSITION,
 			builder -> builder.networkSynchronized(BlockPos.STREAM_CODEC));

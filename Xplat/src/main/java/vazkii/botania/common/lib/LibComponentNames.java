@@ -69,6 +69,7 @@ public final class LibComponentNames {
 	public static final String ANCIENT_WILLS = "ancient_wills";
 	public static final String SOULBOUND = "soulbound";
 	public static final String BOUND_POSITIONS = "bound_positions";
+	public static final String BOUND_SUB_LEVEL_ANCHORS = "bound_sub_level_anchors";
 	public static final String LOCAL_BOUND_POSITION = "local_bound_positions";
 	public static final String LOCAL_DIMENSION = "local_dimension";
 

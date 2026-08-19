@@ -9,12 +9,16 @@ import dev.ryanhcode.sable.api.entity.EntitySubLevelUtil;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
 import dev.ryanhcode.sable.companion.math.BoundingBox3ic;
 import dev.ryanhcode.sable.companion.math.Pose3dc;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.SubLevel;
 import dev.ryanhcode.sable.sublevel.plot.LevelPlot;
 import dev.ryanhcode.sable.sublevel.plot.PlotChunkHolder;
+import dev.ryanhcode.sable.sublevel.tracking_points.SubLevelTrackingPointSavedData;
+import dev.ryanhcode.sable.sublevel.tracking_points.TrackingPoint;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
@@ -22,11 +26,13 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3d;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 
 public class SableCompat {
@@ -36,6 +42,82 @@ public class SableCompat {
      */
     public static boolean isOnSubLevel(Level level, BlockPos pos) {
         return SableCompanion.INSTANCE.getContaining(level, pos) != null;
+    }
+
+    /**
+     * @return true if the given position lies in the plot grid, i.e. it is a sub-level's storage coordinate rather
+     *         than a world one. Unlike {@link #isOnSubLevel(Level, BlockPos)} this does not require the sub-level to
+     *         still exist, so the two together tell a live sub-level block apart from a stale coordinate left behind
+     *         by a sub-level that has since been unloaded or taken apart.
+     */
+    public static boolean isPlotGridPos(Level level, BlockPos pos) {
+        return SableCompanion.INSTANCE.isInPlotGrid(level, pos.getX() >> 4, pos.getZ() >> 4);
+    }
+
+    /**
+     * A resolved Sable tracking point: where it currently is in the world, plus its position in the plot grid of the
+     * sub-level holding it - or {@code null} for a point that presently lives in the regular world, whether because it
+     * was placed there or because the sub-level it was on has been taken apart.
+     */
+    public record SubLevelAnchor(Vec3 worldPos, @Nullable BlockPos localPos) {}
+
+    /**
+     * Registers a Sable tracking point at the center of {@code pos}. Sable keeps such a point with the blocks around
+     * it in both directions: it is carried into the plot when those blocks are assembled into a sub-level (whose
+     * plot-grid coordinates are re-assigned on every assembly, so a plain position would go stale), projected back
+     * into world space when that sub-level is taken apart, and it survives unloading and saving.
+     *
+     * <p>Deliberately registered for regular-world positions too, not just for sub-level ones: a point is the only
+     * thing that follows the blocks when a player assembles a platform <em>around</em> an already-remembered block, and
+     * whether that will happen cannot be known when the position is first remembered.
+     *
+     * @return the id the point can be resolved with later, or {@code null} when the level is not a server one or Sable
+     *         is absent.
+     */
+    @Nullable
+    public static UUID createSubLevelAnchor(Level level, BlockPos pos) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return null;
+        }
+        SubLevelTrackingPointSavedData data = SubLevelTrackingPointSavedData.getOrLoad(serverLevel);
+        if (SableCompanion.INSTANCE.getContaining(level, pos) instanceof ServerSubLevel subLevel) {
+            return data.generateTrackingPoint(Vec3.atCenterOf(pos), subLevel);
+        }
+        // Same shape Sable itself gives a point that has just been projected out of a dismantled sub-level.
+        Vec3 center = Vec3.atCenterOf(pos);
+        UUID anchor = UUID.randomUUID();
+        data.setTrackingPoint(anchor, new TrackingPoint(false, null, null,
+                new Vector3d(center.x, center.y, center.z), null));
+        return anchor;
+    }
+
+    /**
+     * Drops a tracking point created by {@link #createSubLevelAnchor}. Tracking points live in the level's saved data,
+     * so one that is no longer referenced must be removed explicitly.
+     */
+    public static void removeSubLevelAnchor(Level level, UUID anchor) {
+        if (level instanceof ServerLevel serverLevel) {
+            SubLevelTrackingPointSavedData.getOrLoad(serverLevel).removeTrackingPoint(anchor);
+        }
+    }
+
+    /**
+     * @return where the tracking point {@code anchor} currently is, or {@code null} when it cannot be resolved right
+     *         now - the point is unknown, or the sub-level holding it is neither loaded nor recoverable from storage.
+     *         Always {@code null} on the client, where tracking points do not exist.
+     */
+    @Nullable
+    public static SubLevelAnchor resolveSubLevelAnchor(Level level, UUID anchor) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return null;
+        }
+        var taken = SubLevelTrackingPointSavedData.getOrLoad(serverLevel).take(anchor, false);
+        if (taken == null) {
+            return null;
+        }
+        Vec3 worldPos = new Vec3(taken.position().x(), taken.position().y(), taken.position().z());
+        Vector3d local = taken.localAnchor();
+        return new SubLevelAnchor(worldPos, local == null ? null : BlockPos.containing(local.x, local.y, local.z));
     }
 
     /**
