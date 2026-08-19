@@ -101,6 +101,7 @@ dependencies {
     implementation("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_neoforge_version}")
     implementation("com.tterrag.registrate:Registrate:${registrate_neoforge_version}")
 
-    runtimeOnly "maven.modrinth:create-aeronautics:w7zlLnea"
+    runtimeOnly "maven.modrinth:create-aeronautics:Vzp221Un"
     runtimeOnly "maven.modrinth:touys:q1gpE9y4"
+    runtimeOnly "maven.modrinth:sable-fix-mod:nu5TnfWZ"
 }
