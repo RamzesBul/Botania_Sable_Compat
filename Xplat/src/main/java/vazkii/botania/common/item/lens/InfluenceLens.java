@@ -20,7 +20,9 @@ import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.ThrowableProjectile;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.internal.ManaBurst;
 import vazkii.botania.common.item.BotaniaItems;
 
@@ -39,6 +41,13 @@ public class InfluenceLens extends Lens {
 			var primedTnt = entity.level().getEntitiesOfClass(PrimedTnt.class, bounds);
 			var bursts = entity.level().getEntitiesOfClass(ThrowableProjectile.class, bounds, Predicates.instanceOf(ManaBurst.class));
 
+			// Sable answers the box above across coordinate frames, so a burst travelling in a sub-level's logical
+			// space also picks up entities in the world and on other sub-levels. Its velocity is expressed in its
+			// own frame though, so it has to be rotated to world space and then into whatever frame each entity
+			// lives in, otherwise a rotated platform would push them along the wrong axis. Both transforms are
+			// no-ops outside sub-levels, leaving regular-world behavior untouched.
+			Vec3 worldMotion = SableCompat.transformDirectionFromSable(entity.level(), entity.getDeltaMovement(), entity.blockPosition());
+
 			var concat = Iterables.concat(items, expOrbs, arrows, fallingBlocks, primedTnt, bursts);
 			for (Entity movable : concat) {
 				if (movable == burst) {
@@ -51,7 +60,7 @@ public class InfluenceLens extends Lens {
 						continue;
 					}
 				}
-				movable.setDeltaMovement(entity.getDeltaMovement());
+				movable.setDeltaMovement(SableCompat.transformDirectionToSable(movable.level(), worldMotion, movable.blockPosition()));
 			}
 		}
 	}
