@@ -174,6 +174,13 @@ public class ManaBurstEntity extends ThrowableProjectile implements ManaBurst {
 			entityData.set(LEFT_SOURCE_POS, true);
 		}
 
+		// Fake bursts are never added to the level, so ServerLevel#tickNonPassenger never runs for them and nothing
+		// updates xOld/yOld/zOld: they would stay at the spawn position (the spreader) for the whole simulated
+		// flight, and a lens reading them would see the entire trajectory so far instead of this tick's step.
+		if (fake) {
+			setOldPosAndRot();
+		}
+
 		super.tick();
 
 		// A burst fired by a spreader on a Sable sub-level travels in that sub-level's logical space (Sable keeps
