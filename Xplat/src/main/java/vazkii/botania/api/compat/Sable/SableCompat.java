@@ -514,6 +514,25 @@ public class SableCompat {
     }
 
     /**
+     * Rotates a world-space direction vector into the local frame of the sub-level containing {@code anchor},
+     * applying only the sub-level's orientation (no translation). Returns {@code dir} unchanged when
+     * {@code anchor} is a regular-world block (or Sable is absent) — the inverse of
+     * {@link #transformDirectionFromSable(Level, Vec3, BlockPos)}.
+     *
+     * <p>Needed whenever a velocity computed in one frame is handed to an entity living in another: an entity
+     * inside a sub-level moves in that sub-level's logical space, so a world-space push must be expressed there
+     * first, or a rotated platform would send it off in the wrong direction.
+     */
+    public static Vec3 transformDirectionToSable(Level level, Vec3 dir, BlockPos anchor) {
+        SubLevelAccess sub = SableCompanion.INSTANCE.getContaining(level, anchor);
+        if (sub == null) {
+            return dir;
+        }
+        Vector3d out = sub.logicalPose().orientation().transformInverse(new Vector3d(dir.x, dir.y, dir.z));
+        return new Vec3(out.x, out.y, out.z);
+    }
+
+    /**
      * @return whether {@code targetPos} lies within {@code range} (Chebyshev / cube distance) of
      *         {@code anchorPos} when both are measured in {@code anchorPos}'s coordinate frame. {@code targetPos}
      *         may live on a different sub-level: it is transformed to world space and then into
