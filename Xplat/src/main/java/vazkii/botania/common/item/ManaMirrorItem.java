@@ -12,6 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
@@ -28,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
 import vazkii.botania.api.block.Bound;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.item.CoordBoundItem;
 import vazkii.botania.api.mana.ManaBarTooltip;
 import vazkii.botania.api.mana.ManaItem;
@@ -40,6 +42,7 @@ import vazkii.botania.common.helper.DataComponentHelper;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 public class ManaMirrorItem extends Item {
 
@@ -72,9 +75,12 @@ public class ManaMirrorItem extends Item {
 			return;
 		}
 
+		rehomeBinding(world.getServer(), stack);
+
 		ManaPool pool = getManaPool(world.getServer(), stack);
 		if (!(pool instanceof DummyPool)) {
 			if (pool != null) {
+				backfillAnchor(stack, pool);
 				pool.receiveMana(getManaBacklog(stack));
 				clearManaBacklog(stack);
 				setMana(stack, pool.getCurrentMana());
@@ -122,8 +128,84 @@ public class ManaMirrorItem extends Item {
 	}
 
 	public void bindPool(ItemStack stack, ManaPool pool) {
-		GlobalPos pos = GlobalPos.of(pool.getManaReceiverLevel().dimension(), pool.getManaReceiverPos());
+		Level poolLevel = pool.getManaReceiverLevel();
+		BlockPos poolPos = pool.getManaReceiverPos();
+
+		// Released before the new binding overwrites the old one, since the point has to be dropped through the
+		// level of the dimension it was registered in, which is the one the previous binding still names.
+		removeAnchor(stack, poolLevel.getServer());
+
+		GlobalPos pos = GlobalPos.of(poolLevel.dimension(), poolPos);
 		stack.set(BotaniaDataComponents.MANA_POOL_POS, pos);
+		setAnchor(stack, poolLevel, poolPos);
+	}
+
+	/**
+	 * Backs the binding with a fresh Sable tracking point. The bound position alone cannot survive a sub-level: its
+	 * plot-grid coordinates are re-assigned every time the platform is assembled, and a world position stops meaning
+	 * anything the moment those blocks are assembled into one. The tracking point is what Sable carries through both,
+	 * and the position is refreshed from it in {@link #rehomeBinding}. Registered for regular-world pools as well,
+	 * since whether a platform will later be built around one cannot be known here.
+	 */
+	private static void setAnchor(ItemStack stack, Level level, BlockPos pos) {
+		DataComponentHelper.setOptional(stack, BotaniaDataComponents.BOUND_SUB_LEVEL_ANCHOR,
+				SableCompat.createSubLevelAnchor(level, pos));
+	}
+
+	private static void removeAnchor(ItemStack stack, @Nullable MinecraftServer server) {
+		UUID anchor = stack.remove(BotaniaDataComponents.BOUND_SUB_LEVEL_ANCHOR);
+		GlobalPos bound = getBoundPos(stack);
+		if (anchor == null || bound == null || server == null) {
+			return;
+		}
+		ServerLevel level = server.getLevel(bound.dimension());
+		if (level != null) {
+			SableCompat.removeSubLevelAnchor(level, anchor);
+		}
+	}
+
+	/**
+	 * Points the binding at wherever its tracking point ended up. Resolved against the bound dimension rather than
+	 * the one the holder is currently in: unlike the Eye of the Flügel, a mirror holds a single binding that may well
+	 * name another dimension, and tracking points are stored per level. While the platform is taken apart the point
+	 * sits in the regular world and the binding reads as a plain world one - but the point is deliberately kept,
+	 * since that is exactly what Sable re-homes into the new plot when those blocks are assembled again.
+	 */
+	private static void rehomeBinding(@Nullable MinecraftServer server, ItemStack stack) {
+		UUID anchor = stack.get(BotaniaDataComponents.BOUND_SUB_LEVEL_ANCHOR);
+		GlobalPos bound = getBoundPos(stack);
+		if (anchor == null || bound == null || server == null) {
+			return;
+		}
+		ServerLevel level = server.getLevel(bound.dimension());
+		if (level == null) {
+			return;
+		}
+
+		SableCompat.SubLevelAnchor resolved = SableCompat.resolveSubLevelAnchor(level, anchor);
+		// A null resolve means the sub-level cannot be reached right now; leave the last known position alone.
+		if (resolved == null) {
+			return;
+		}
+
+		BlockPos pos = resolved.localPos() != null
+				? resolved.localPos()
+				: BlockPos.containing(resolved.worldPos());
+		if (!pos.equals(bound.pos())) {
+			// Written on every tick otherwise, and this one is persisted and synced.
+			stack.set(BotaniaDataComponents.MANA_POOL_POS, GlobalPos.of(bound.dimension(), pos));
+		}
+	}
+
+	/**
+	 * Gives a mirror bound before sub-level anchors existed one now, so an existing binding survives the next
+	 * assembly instead of having to be redone. Deliberately gated on a pool that actually resolved: registering one
+	 * from a position that no longer holds a pool would leak a fresh tracking point every tick.
+	 */
+	private static void backfillAnchor(ItemStack stack, ManaPool pool) {
+		if (!stack.has(BotaniaDataComponents.BOUND_SUB_LEVEL_ANCHOR)) {
+			setAnchor(stack, pool.getManaReceiverLevel(), pool.getManaReceiverPos());
+		}
 	}
 
 	@Nullable

@@ -134,6 +134,14 @@ public class BotaniaDataComponents {
 	 */
 	public static final DataComponentType<GlobalPos> MANA_POOL_POS = make(LibComponentNames.MANA_POOL_POS,
 			builder -> builder.persistent(GlobalPos.CODEC).networkSynchronized(GlobalPos.STREAM_CODEC));
+	/**
+	 * Sable tracking point backing the binding above: a pool on a sub-level cannot be kept as a plain position, since
+	 * a sub-level's plot-grid coordinates are re-assigned every time its blocks are assembled. Sable tracks such a
+	 * point across (dis)assembly, unloading and saving for us; see SableCompat. Unlike the Eye of the Flügel's
+	 * per-dimension anchors, a mirror holds exactly one binding, so this resolves against the bound dimension.
+	 */
+	public static final DataComponentType<UUID> BOUND_SUB_LEVEL_ANCHOR = make(LibComponentNames.BOUND_SUB_LEVEL_ANCHOR,
+			builder -> builder.persistent(UUIDUtil.CODEC).networkSynchronized(UUIDUtil.STREAM_CODEC));
 
 	// crafting halo data
 	public static final DataComponentType<Float> HALO_ROTATION_BASE = make(LibComponentNames.HALO_ROTATION_BASE,
