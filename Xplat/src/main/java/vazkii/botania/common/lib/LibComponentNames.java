@@ -38,6 +38,7 @@ public final class LibComponentNames {
 	public static final String CREATIVE_MANA = "creative_mana";
 	public static final String MANA_BACKLOG = "mana_backlog";
 	public static final String MANA_POOL_POS = "mana_pool_pos";
+	public static final String BOUND_SUB_LEVEL_ANCHOR = "bound_sub_level_anchor";
 
 	public static final String HALO_ROTATION_BASE = "halo_rotation_base";
 	public static final String LAST_RECIPE_ID = "last_recipe_id";
