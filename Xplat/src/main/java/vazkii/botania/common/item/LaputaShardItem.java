@@ -35,6 +35,7 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.HitResult;
 
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.internal.ManaBurst;
 import vazkii.botania.api.mana.BurstProperties;
 import vazkii.botania.api.mana.LensEffectItem;
@@ -88,6 +89,21 @@ public class LaputaShardItem extends Item implements LensEffectItem, TinyPlanetE
 	public InteractionResult useOn(UseOnContext ctx) {
 		Level world = ctx.getLevel();
 		BlockPos pos = ctx.getClickedPos();
+
+		// The whole operation runs in the coordinate frame of the clicked position, and on a sub-level that frame
+		// is the plot grid: the carrier bursts are retained there, and both the destination column and the target
+		// height are taken from plot-grid coordinates, so the blocks would reappear inside the plot rather than
+		// above the platform. It also runs for minutes, with hundreds of bursts in flight holding plot positions
+		// that any re-assembly invalidates, while removing the blocks one by one could split the structure.
+		// A platform is already a floating island, so there is nothing worth salvaging here. Checked on both
+		// sides so client and server agree on the resulting state.
+		if (SableCompat.isOnSubLevel(world, pos)) {
+			if (world.isClientSide && ctx.getPlayer() != null) {
+				ctx.getPlayer().displayClientMessage(Component.translatable("botaniamisc.laputaShardSubLevel"), true);
+			}
+			return InteractionResult.PASS;
+		}
+
 		if (pos.getY() < world.getMaxBuildHeight() - BASE_OFFSET && !world.dimensionType().hasCeiling()) {
 			if (!world.isClientSide) {
 				world.gameEvent(ctx.getPlayer(), GameEvent.ENTITY_PLACE, pos);
