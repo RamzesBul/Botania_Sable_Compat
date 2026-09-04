@@ -11,16 +11,17 @@ package vazkii.botania.common.item.equipment.armor.elementium;
 import com.google.common.base.Suppliers;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.client.lib.ResourcesLib;
 import vazkii.botania.common.handler.PixieHandler;
 import vazkii.botania.common.item.BotaniaItems;
@@ -34,8 +35,8 @@ import static vazkii.botania.api.BotaniaAPI.botaniaRL;
 public class ElementiumArmorItem extends ManasteelArmorItem {
 	private final Supplier<ItemAttributeModifiers> defaultModifiers;
 
-	public ElementiumArmorItem(Type type, double pixieChance, Properties properties) {
-		super(type, BotaniaAPI.instance().getElementiumArmorMaterial(), properties);
+	public ElementiumArmorItem(Type type, Holder<ArmorMaterial> material, double pixieChance, Properties properties) {
+		super(type, material, properties);
 		this.defaultModifiers = Suppliers.memoize(() -> super.getDefaultAttributeModifiers()
 				.withModifierAdded(PixieHandler.PIXIE_SPAWN_CHANCE, PixieHandler.makeModifier(
 						botaniaRL("armor." + type.getName()), pixieChance),

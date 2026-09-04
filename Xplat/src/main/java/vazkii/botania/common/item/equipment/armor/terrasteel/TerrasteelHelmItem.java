@@ -9,6 +9,7 @@
 package vazkii.botania.common.item.equipment.armor.terrasteel;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -17,6 +18,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
@@ -34,8 +36,8 @@ import java.util.*;
 
 public class TerrasteelHelmItem extends TerrasteelArmorItem implements ManaDiscountArmor, AncientWillContainer {
 
-	public TerrasteelHelmItem(Properties properties) {
-		super(Type.HELMET, properties);
+	public TerrasteelHelmItem(Type type, Holder<ArmorMaterial> material, Properties properties) {
+		super(type, material, properties);
 	}
 
 	@Override

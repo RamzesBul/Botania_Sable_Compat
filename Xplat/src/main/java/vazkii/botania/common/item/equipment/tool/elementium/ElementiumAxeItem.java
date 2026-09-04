@@ -14,10 +14,10 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Tier;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.common.annotations.SoftImplement;
 import vazkii.botania.common.item.equipment.tool.manasteel.ManasteelAxeItem;
 
@@ -25,8 +25,8 @@ import java.util.Optional;
 
 public class ElementiumAxeItem extends ManasteelAxeItem {
 
-	public ElementiumAxeItem(Properties props) {
-		super(BotaniaAPI.instance().getElementiumItemTier(), props.attributes(ElementiumAxeItem.createAttributes(BotaniaAPI.instance().getElementiumItemTier(), 6F, -3.1F)));
+	public ElementiumAxeItem(Tier tier, Properties properties) {
+		super(tier, properties);
 	}
 
 	@SoftImplement("IItemExtension")

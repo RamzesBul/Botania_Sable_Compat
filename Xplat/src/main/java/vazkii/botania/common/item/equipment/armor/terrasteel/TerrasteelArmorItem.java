@@ -11,6 +11,7 @@ package vazkii.botania.common.item.equipment.armor.terrasteel;
 import com.google.common.base.Suppliers;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
@@ -20,10 +21,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.client.lib.ResourcesLib;
 import vazkii.botania.common.annotations.SoftImplement;
 import vazkii.botania.common.item.BotaniaItems;
@@ -36,8 +37,8 @@ import static vazkii.botania.api.BotaniaAPI.botaniaRL;
 
 public class TerrasteelArmorItem extends ManasteelArmorItem {
 
-	public TerrasteelArmorItem(Type type, Properties properties) {
-		super(type, BotaniaAPI.instance().getTerrasteelArmorMaterial(), properties);
+	public TerrasteelArmorItem(Type type, Holder<ArmorMaterial> material, Properties properties) {
+		super(type, material, properties);
 	}
 
 	@Override

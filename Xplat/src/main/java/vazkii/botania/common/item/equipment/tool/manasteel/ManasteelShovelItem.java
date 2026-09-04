@@ -13,18 +13,13 @@ import net.minecraft.world.item.ShovelItem;
 import net.minecraft.world.item.Tier;
 import net.minecraft.world.level.block.state.BlockState;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.item.SortableTool;
 import vazkii.botania.common.item.equipment.tool.ToolCommons;
 
 public class ManasteelShovelItem extends ShovelItem implements SortableTool {
 
-	public ManasteelShovelItem(Properties props) {
-		this(BotaniaAPI.instance().getManasteelItemTier(), props);
-	}
-
-	public ManasteelShovelItem(Tier mat, Properties props) {
-		super(mat, props.attributes(ManasteelShovelItem.createAttributes(mat, 1.5F, -3.0F)));
+	public ManasteelShovelItem(Tier tier, Properties properties) {
+		super(tier, properties);
 	}
 
 	@Override

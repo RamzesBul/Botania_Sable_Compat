@@ -11,16 +11,17 @@ package vazkii.botania.common.item.equipment.armor.manaweave;
 import com.google.common.base.Suppliers;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.client.core.proxy.ClientProxy;
 import vazkii.botania.client.lib.ResourcesLib;
 import vazkii.botania.common.annotations.SoftImplement;
@@ -33,8 +34,8 @@ import java.util.function.Supplier;
 
 public class ManaweaveArmorItem extends ManasteelArmorItem {
 
-	public ManaweaveArmorItem(Type type, Properties properties) {
-		super(type, BotaniaAPI.instance().getManaweaveArmorMaterial(), properties);
+	public ManaweaveArmorItem(Type type, Holder<ArmorMaterial> material, Properties properties) {
+		super(type, material, properties);
 	}
 
 	@Override

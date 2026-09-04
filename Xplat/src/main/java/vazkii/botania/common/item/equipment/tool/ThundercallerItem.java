@@ -16,19 +16,19 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.Tier;
 import net.minecraft.world.phys.AABB;
 
-import vazkii.botania.api.BotaniaAPI;
-import vazkii.botania.common.item.equipment.tool.manasteel.ManasteelSwordItem;
 import vazkii.botania.network.clientbound.ThundercallerEffectPacket;
 import vazkii.botania.xplat.XplatAbstractions;
 
 import java.util.List;
 import java.util.function.Predicate;
 
-public class ThundercallerItem extends ManasteelSwordItem {
-	public ThundercallerItem(Properties props) {
-		super(BotaniaAPI.instance().getTerrasteelItemTier(), 3, -1.5F, props);
+public class ThundercallerItem extends SwordItem {
+	public ThundercallerItem(Tier tier, Properties properties) {
+		super(tier, properties);
 	}
 
 	@Override

@@ -15,7 +15,6 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.state.BlockState;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.item.SortableTool;
 import vazkii.botania.client.gui.ItemsRemainingRenderHandler;
 import vazkii.botania.common.helper.PlayerHelper;
@@ -23,10 +22,6 @@ import vazkii.botania.common.item.equipment.tool.ToolCommons;
 import vazkii.botania.common.lib.BotaniaTags;
 
 public class ManasteelAxeItem extends AxeItem implements SortableTool {
-
-	public ManasteelAxeItem(Properties props) {
-		this(BotaniaAPI.instance().getManasteelItemTier(), props.attributes(ManasteelAxeItem.createAttributes(BotaniaAPI.instance().getManasteelItemTier(), 6F, -3.1F)));
-	}
 
 	public ManasteelAxeItem(Tier tier, Properties properties) {
 		super(tier, properties);

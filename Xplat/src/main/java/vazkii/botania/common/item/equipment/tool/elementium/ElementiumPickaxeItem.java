@@ -10,8 +10,8 @@ package vazkii.botania.common.item.equipment.tool.elementium;
 
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Tier;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.common.item.BotaniaItems;
 import vazkii.botania.common.item.equipment.tool.manasteel.ManasteelPickaxeItem;
 import vazkii.botania.common.item.equipment.tool.terrasteel.TerraShattererItem;
@@ -19,8 +19,8 @@ import vazkii.botania.common.lib.BotaniaTags;
 
 public class ElementiumPickaxeItem extends ManasteelPickaxeItem {
 
-	public ElementiumPickaxeItem(Properties props) {
-		super(BotaniaAPI.instance().getElementiumItemTier(), props, -2.8F);
+	public ElementiumPickaxeItem(Tier tier, Properties properties) {
+		super(tier, properties);
 	}
 
 	public static boolean shouldFilterOut(Entity e, ItemStack tool, ItemStack drop) {

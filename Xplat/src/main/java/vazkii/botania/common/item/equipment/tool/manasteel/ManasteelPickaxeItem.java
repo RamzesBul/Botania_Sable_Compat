@@ -15,7 +15,6 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.state.BlockState;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.item.SortableTool;
 import vazkii.botania.client.gui.ItemsRemainingRenderHandler;
 import vazkii.botania.common.helper.PlayerHelper;
@@ -26,12 +25,8 @@ public class ManasteelPickaxeItem extends PickaxeItem implements SortableTool {
 
 	private static final int TIME = 5;
 
-	public ManasteelPickaxeItem(Properties props) {
-		this(BotaniaAPI.instance().getManasteelItemTier(), props, -2.8F);
-	}
-
-	public ManasteelPickaxeItem(Tier tier, Properties props, float attackSpeed) {
-		super(tier, props.attributes(ManasteelPickaxeItem.createAttributes(tier, 1, attackSpeed)));
+	public ManasteelPickaxeItem(Tier tier, Properties properties) {
+		super(tier, properties);
 	}
 
 	@Override

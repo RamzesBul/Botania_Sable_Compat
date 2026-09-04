@@ -10,17 +10,17 @@ package vazkii.botania.common.item.equipment.tool.elementium;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.Tier;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.common.item.equipment.tool.manasteel.ManasteelHoeItem;
 
 public class ElementiumHoeItem extends ManasteelHoeItem {
-	public ElementiumHoeItem(Properties props) {
-		super(BotaniaAPI.instance().getElementiumItemTier(), props, -1f);
+	public ElementiumHoeItem(Tier tier, Properties properties) {
+		super(tier, properties);
 	}
 
 	@Override

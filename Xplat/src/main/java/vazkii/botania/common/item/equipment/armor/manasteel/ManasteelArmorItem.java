@@ -20,7 +20,6 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.item.PhantomInkable;
 import vazkii.botania.client.gui.TooltipHandler;
 import vazkii.botania.client.lib.ResourcesLib;
@@ -35,15 +34,8 @@ import java.util.function.Supplier;
 
 public class ManasteelArmorItem extends ArmorItem implements PhantomInkable {
 
-	public final Type type;
-
-	public ManasteelArmorItem(Type type, Properties properties) {
-		this(type, BotaniaAPI.instance().getManasteelArmorMaterial(), properties);
-	}
-
 	public ManasteelArmorItem(Type type, Holder<ArmorMaterial> material, Properties properties) {
 		super(material, type, properties);
-		this.type = type;
 	}
 
 	@SoftImplement("IItemExtension")

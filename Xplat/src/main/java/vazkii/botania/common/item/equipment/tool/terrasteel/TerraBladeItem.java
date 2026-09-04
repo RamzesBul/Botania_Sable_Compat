@@ -17,6 +17,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.Tier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
@@ -31,18 +33,17 @@ import vazkii.botania.api.mana.LensEffectItem;
 import vazkii.botania.common.entity.ManaBurstEntity;
 import vazkii.botania.common.handler.BotaniaSounds;
 import vazkii.botania.common.item.BotaniaItems;
-import vazkii.botania.common.item.equipment.tool.manasteel.ManasteelSwordItem;
 import vazkii.botania.network.serverbound.LeftClickPacket;
 import vazkii.botania.xplat.ClientXplatAbstractions;
 
 import java.util.List;
 
-public class TerraBladeItem extends ManasteelSwordItem implements LensEffectItem {
+public class TerraBladeItem extends SwordItem implements LensEffectItem {
 
 	private static final int BURST_MANA = 100;
 
-	public TerraBladeItem(Properties props) {
-		super(BotaniaAPI.instance().getTerrasteelItemTier(), props);
+	public TerraBladeItem(Tier tier, Properties properties) {
+		super(tier, properties);
 	}
 
 	public static void leftClick(ItemStack stack) {

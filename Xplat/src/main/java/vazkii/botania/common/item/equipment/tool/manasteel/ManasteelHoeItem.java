@@ -13,18 +13,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Tier;
 import net.minecraft.world.level.block.state.BlockState;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.item.SortableTool;
 import vazkii.botania.common.item.equipment.tool.ToolCommons;
 
 public class ManasteelHoeItem extends HoeItem implements SortableTool {
 
-	public ManasteelHoeItem(Properties props) {
-		this(BotaniaAPI.instance().getManasteelItemTier(), props, -1f);
-	}
-
-	public ManasteelHoeItem(Tier mat, Properties properties, float attackSpeed) { //Todo unsure about this
-		super(mat, properties.attributes(ManasteelHoeItem.createAttributes(mat, -mat.getAttackDamageBonus(), attackSpeed)));
+	public ManasteelHoeItem(Tier tier, Properties properties) {
+		super(tier, properties);
 	}
 
 	@Override

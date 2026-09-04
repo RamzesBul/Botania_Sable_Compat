@@ -13,13 +13,10 @@ import net.minecraft.core.DefaultedRegistry;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -49,72 +46,15 @@ import vazkii.botania.common.handler.ManaNetworkHandler;
 import vazkii.botania.common.helper.RegistryHelper;
 import vazkii.botania.common.integration.corporea.CorporeaNodeDetectors;
 import vazkii.botania.common.item.BotaniaArmorMaterials;
-import vazkii.botania.common.item.BotaniaItems;
+import vazkii.botania.common.item.BotaniaItemTiers;
 import vazkii.botania.common.item.relic.RingOfLokiItem;
 import vazkii.botania.xplat.XplatAbstractions;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class BotaniaAPIImpl implements BotaniaAPI {
-
-	private enum ItemTier implements Tier {
-		MANASTEEL(300, 6.2F, 2, 20,
-				() -> BotaniaItems.MANASTEEL_INGOT, BlockTags.INCORRECT_FOR_DIAMOND_TOOL),
-		ELEMENTIUM(720, 6.2F, 2, 20,
-				() -> BotaniaItems.ELEMENTIUM_INGOT, BlockTags.INCORRECT_FOR_DIAMOND_TOOL),
-		TERRASTEEL(2300, 9, 4, 26,
-				() -> BotaniaItems.TERRASTEEL_INGOT, BlockTags.INCORRECT_FOR_NETHERITE_TOOL);
-
-		private final int maxUses;
-		private final float efficiency;
-		private final float attackDamage;
-		private final int enchantability;
-		private final Supplier<Item> repairItem;
-		private final TagKey<Block> incorrectBlockForDrops;
-
-		ItemTier(int maxUses, float efficiency, float attackDamage, int enchantability,
-				Supplier<Item> repairItem, TagKey<Block> incorrectBlockForDrops) {
-			this.maxUses = maxUses;
-			this.efficiency = efficiency;
-			this.attackDamage = attackDamage;
-			this.enchantability = enchantability;
-			this.repairItem = repairItem;
-			this.incorrectBlockForDrops = incorrectBlockForDrops;
-		}
-
-		@Override
-		public int getUses() {
-			return maxUses;
-		}
-
-		@Override
-		public float getSpeed() {
-			return efficiency;
-		}
-
-		@Override
-		public float getAttackDamageBonus() {
-			return attackDamage;
-		}
-
-		@Override
-		public TagKey<Block> getIncorrectBlocksForDrops() {
-			return incorrectBlockForDrops;
-		}
-
-		@Override
-		public int getEnchantmentValue() {
-			return enchantability;
-		}
-
-		@Override
-		public Ingredient getRepairIngredient() {
-			return Ingredient.of(repairItem.get());
-		}
-	}
 
 	private ConfigDataManager configDataManager = new ConfigDataManagerImpl();
 
@@ -155,17 +95,17 @@ public class BotaniaAPIImpl implements BotaniaAPI {
 
 	@Override
 	public Tier getManasteelItemTier() {
-		return ItemTier.MANASTEEL;
+		return BotaniaItemTiers.MANASTEEL;
 	}
 
 	@Override
 	public Tier getElementiumItemTier() {
-		return ItemTier.ELEMENTIUM;
+		return BotaniaItemTiers.ELEMENTIUM;
 	}
 
 	@Override
 	public Tier getTerrasteelItemTier() {
-		return ItemTier.TERRASTEEL;
+		return BotaniaItemTiers.TERRASTEEL;
 	}
 
 	@Override

@@ -16,24 +16,24 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.Tier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.common.component.BotaniaDataComponents;
 import vazkii.botania.common.entity.FallingStarEntity;
 import vazkii.botania.common.handler.BotaniaSounds;
-import vazkii.botania.common.item.equipment.tool.manasteel.ManasteelSwordItem;
 
-public class StarcallerItem extends ManasteelSwordItem {
+public class StarcallerItem extends SwordItem {
 
 	/* Number of ticks between two stars */
 	private static final int INTERVAL = 12;
 
-	public StarcallerItem(Properties props) {
-		super(BotaniaAPI.instance().getTerrasteelItemTier(), props);
+	public StarcallerItem(Tier tier, Properties properties) {
+		super(tier, properties);
 	}
 
 	@Override

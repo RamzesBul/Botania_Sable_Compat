@@ -69,8 +69,8 @@ public class TerraShattererItem extends ManasteelPickaxeItem implements Sequenti
 			10000 - 1, 1000000 - 1, 10000000 - 1, 100000000 - 1, 1000000000 - 1, MAX_MANA - 1
 	};
 
-	public TerraShattererItem(Properties props) {
-		super(BotaniaAPI.instance().getTerrasteelItemTier(), props, -2.8F);
+	public TerraShattererItem(Tier tier, Properties properties) {
+		super(tier, properties);
 	}
 
 	@Override
