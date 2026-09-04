@@ -16,6 +16,8 @@ public final class LibComponentNames {
 	public static final String PHANTOM_INKED = "phantom_inked";
 	public static final String RESOLUTE_IVY = "resolute_ivy";
 
+	public static final String MANA_REPAIR = "mana_repair";
+
 	public static final String ELEMENTIUM_TIPPED = "elementium_tipped";
 	public static final String ELVEN_UNLOCK = "elven_unlock";
 	public static final String RENDER_FULL = "render_full";

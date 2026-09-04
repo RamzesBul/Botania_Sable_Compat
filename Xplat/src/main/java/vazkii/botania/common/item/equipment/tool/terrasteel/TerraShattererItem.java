@@ -60,7 +60,6 @@ public class TerraShattererItem extends ManasteelPickaxeItem implements Sequenti
 		SpecialBlockBreakingHandler {
 
 	public static final int MAX_MANA = Integer.MAX_VALUE;
-	private static final int MANA_PER_DAMAGE = 100;
 
 	public static final int[] LEVELS = new int[] {
 			0, 10000, 1000000, 10000000, 100000000, 1000000000
@@ -167,11 +166,6 @@ public class TerraShattererItem extends ManasteelPickaxeItem implements Sequenti
 				BotaniaAPI.instance().breakOnAllCursors(player, stack, pos, face);
 			}
 		}
-	}
-
-	@Override
-	public int getManaPerDamage() {
-		return MANA_PER_DAMAGE;
 	}
 
 	@Override

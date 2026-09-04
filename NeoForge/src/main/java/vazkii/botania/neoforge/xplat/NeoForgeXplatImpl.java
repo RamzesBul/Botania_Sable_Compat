@@ -384,11 +384,6 @@ public class NeoForgeXplatImpl implements XplatAbstractions {
 	}
 
 	@Override
-	public Item.Properties defaultItemBuilder() {
-		return new Item.Properties();
-	}
-
-	@Override
 	public Item.Properties noRepairOnNeoForge(Item.Properties builder) {
 		return builder.setNoRepair();
 	}

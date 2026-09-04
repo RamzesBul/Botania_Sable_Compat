@@ -64,6 +64,9 @@ public class BotaniaDataComponents {
 	public static final DataComponentType<Unit> PHANTOM_INKED = makeUnit(LibComponentNames.PHANTOM_INKED);
 	public static final DataComponentType<Unit> RESOLUTE_IVY = makeUnit(LibComponentNames.RESOLUTE_IVY);
 
+	public static final DataComponentType<ManaRepair> MANA_REPAIR = make(LibComponentNames.MANA_REPAIR,
+			builder -> builder.persistent(ManaRepair.CODEC).networkSynchronized(ManaRepair.STREAM_CODEC));
+
 	// various specific flags
 	public static final DataComponentType<Unit> ELEMENTIUM_TIPPED = makeUnit(LibComponentNames.ELEMENTIUM_TIPPED);
 	public static final DataComponentType<Unit> ELVEN_UNLOCK = makeUnit(LibComponentNames.ELVEN_UNLOCK);
@@ -334,6 +337,12 @@ public class BotaniaDataComponents {
 			builder -> builder.persistent(ExtraCodecs.strictUnboundedMap(
 					// map keys must be strings, but this is unlikely to have many values anyway, so it's probably fine
 					Codec.STRING.xmap(UUID::fromString, UUID::toString), Codec.LONG)).cacheEncoding());
+
+	// Crystal Bow arrow marker
+	/**
+	 * Applied to virtual arrow items when Crystal Bow conjures them to signify that shooting should consume mana.
+	 */
+	public static final DataComponentType<Unit> CONJURED_PROJECTILE = makeTransientUnit("conjured_projectile");
 
 	public static void registerComponents(BiConsumer<DataComponentType<?>, ResourceLocation> biConsumer) {
 		for (Map.Entry<String, DataComponentType<?>> entry : ALL.entrySet()) {

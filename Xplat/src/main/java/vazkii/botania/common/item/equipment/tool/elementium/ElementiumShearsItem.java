@@ -21,7 +21,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
-import vazkii.botania.common.item.BotaniaItems;
 import vazkii.botania.common.item.equipment.tool.manasteel.ManasteelShearsItem;
 
 import java.util.List;
@@ -66,11 +65,6 @@ public class ElementiumShearsItem extends ManasteelShearsItem {
 				}
 			}
 		}
-	}
-
-	@Override
-	public boolean isValidRepairItem(ItemStack toRepair, ItemStack repairBy) {
-		return repairBy.is(BotaniaItems.ELEMENTIUM_INGOT) || super.isValidRepairItem(toRepair, repairBy);
 	}
 
 	@Override

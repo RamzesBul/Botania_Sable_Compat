@@ -29,15 +29,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
+import vazkii.botania.api.item.SpecialBlockBreakingHandler;
 import vazkii.botania.common.component.BotaniaDataComponents;
 import vazkii.botania.common.item.equipment.tool.manasteel.ManasteelPickaxeItem;
 import vazkii.botania.common.lib.BotaniaTags;
 
 import java.util.List;
 
-public class VitreousPickaxeItem extends ManasteelPickaxeItem implements
-		vazkii.botania.api.item.SpecialBlockBreakingHandler {
-	private static final int MANA_PER_DAMAGE = 160;
+public class VitreousPickaxeItem extends ManasteelPickaxeItem implements SpecialBlockBreakingHandler {
 	private static final Tier MATERIAL = new Tier() {
 		@Override
 		public int getUses() {
@@ -117,11 +116,6 @@ public class VitreousPickaxeItem extends ManasteelPickaxeItem implements
 
 	private boolean isGlass(BlockState state) {
 		return state.is(BotaniaTags.Blocks.VITREOUS_PICKAXE_SILKTOUCHED);
-	}
-
-	@Override
-	public int getManaPerDamage() {
-		return MANA_PER_DAMAGE;
 	}
 
 	@Override

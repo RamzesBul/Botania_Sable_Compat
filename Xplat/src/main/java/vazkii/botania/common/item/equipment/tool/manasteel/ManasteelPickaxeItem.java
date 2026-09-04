@@ -10,30 +10,19 @@ package vazkii.botania.common.item.equipment.tool.manasteel;
 
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-
-import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.item.SortableTool;
-import vazkii.botania.api.mana.ManaItemHandler;
 import vazkii.botania.client.gui.ItemsRemainingRenderHandler;
 import vazkii.botania.common.helper.PlayerHelper;
-import vazkii.botania.common.item.equipment.CustomDamageItem;
 import vazkii.botania.common.item.equipment.tool.ToolCommons;
 import vazkii.botania.common.lib.BotaniaTags;
 
-import java.util.function.Consumer;
-
-public class ManasteelPickaxeItem extends PickaxeItem implements CustomDamageItem, SortableTool {
-
-	private static final int MANA_PER_DAMAGE = 60;
+public class ManasteelPickaxeItem extends PickaxeItem implements SortableTool {
 
 	private static final int TIME = 5;
 
@@ -43,12 +32,6 @@ public class ManasteelPickaxeItem extends PickaxeItem implements CustomDamageIte
 
 	public ManasteelPickaxeItem(Tier tier, Properties props, float attackSpeed) {
 		super(tier, props.attributes(ManasteelPickaxeItem.createAttributes(tier, 1, attackSpeed)));
-	}
-
-	@Override
-	public <T extends LivingEntity> int damageItem(ItemStack stack, int amount, @Nullable T entity, Consumer<Item> breakCallback) {
-		int manaPerDamage = ((ManasteelPickaxeItem) stack.getItem()).getManaPerDamage();
-		return ToolCommons.damageItemIfPossible(stack, amount, entity, manaPerDamage);
 	}
 
 	@Override
@@ -76,18 +59,6 @@ public class ManasteelPickaxeItem extends PickaxeItem implements CustomDamageIte
 			}
 		}
 		return InteractionResult.PASS;
-	}
-
-	public int getManaPerDamage() {
-		return MANA_PER_DAMAGE;
-	}
-
-	@Override
-	public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-		if (!level.isClientSide && entity instanceof Player player && stack.getDamageValue() > 0
-				&& ManaItemHandler.instance().requestManaExactForTool(stack, player, MANA_PER_DAMAGE * 2, true)) {
-			stack.setDamageValue(stack.getDamageValue() - 1);
-		}
 	}
 
 	@Override

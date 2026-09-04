@@ -29,7 +29,6 @@ import vazkii.botania.common.item.equipment.tool.manasteel.ManasteelSwordItem;
 
 public class StarcallerItem extends ManasteelSwordItem {
 
-	private static final int MANA_PER_DAMAGE = 120;
 	/* Number of ticks between two stars */
 	private static final int INTERVAL = 12;
 
@@ -85,10 +84,5 @@ public class StarcallerItem extends ManasteelSwordItem {
 			stack.hurtAndBreak(1, player, LivingEntity.getSlotForHand(InteractionHand.MAIN_HAND));
 			world.playSound(null, player.getX(), player.getY(), player.getZ(), BotaniaSounds.STARCALLER, SoundSource.PLAYERS, 1F, 1F);
 		}
-	}
-
-	@Override
-	public int getManaPerDamage() {
-		return MANA_PER_DAMAGE;
 	}
 }

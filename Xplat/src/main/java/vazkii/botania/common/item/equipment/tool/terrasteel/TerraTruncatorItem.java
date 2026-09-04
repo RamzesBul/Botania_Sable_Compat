@@ -57,11 +57,6 @@ public class TerraTruncatorItem extends ManasteelAxeItem implements SequentialBr
 	private static final int LEAF_BLOCK_RANGE = 3;
 
 	/**
-	 * The amount of mana required to restore 1 point of damage.
-	 */
-	private static final int MANA_PER_DAMAGE = 100;
-
-	/**
 	 * Represents a map of dimension IDs to a set of all block swappers
 	 * active in that dimension.
 	 */
@@ -90,11 +85,6 @@ public class TerraTruncatorItem extends ManasteelAxeItem implements SequentialBr
 				BotaniaAPI.instance().breakOnAllCursors(player, stack, pos, face);
 			}
 		}
-	}
-
-	@Override
-	public int getManaPerDamage() {
-		return MANA_PER_DAMAGE;
 	}
 
 	@Override

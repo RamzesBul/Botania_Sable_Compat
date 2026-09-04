@@ -47,6 +47,7 @@
     "ItemEntityMixin_UpdateLifetimeData",
     "ItemFrameMixin",
     "ItemMixin",
+    "ItemStackMixin",
     "LevelAccessor",
     "LiquidBlockAccessor",
     "LivingEntityAccessor",

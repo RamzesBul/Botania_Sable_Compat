@@ -39,7 +39,7 @@ import java.util.List;
 
 public class TerraBladeItem extends ManasteelSwordItem implements LensEffectItem {
 
-	private static final int MANA_PER_DAMAGE = 100;
+	private static final int BURST_MANA = 100;
 
 	public TerraBladeItem(Properties props) {
 		super(BotaniaAPI.instance().getTerrasteelItemTier(), props);
@@ -74,19 +74,14 @@ public class TerraBladeItem extends ManasteelSwordItem implements LensEffectItem
 		}
 	}
 
-	@Override
-	public int getManaPerDamage() {
-		return MANA_PER_DAMAGE;
-	}
-
 	public static ManaBurstEntity getBurst(Player player, ItemStack stack) {
 		ManaBurstEntity burst = new ManaBurstEntity(player);
 
 		float motionModifier = 7F;
 
 		burst.setColor(0x20FF20);
-		burst.setMana(MANA_PER_DAMAGE);
-		burst.setStartingMana(MANA_PER_DAMAGE);
+		burst.setMana(BURST_MANA);
+		burst.setStartingMana(BURST_MANA);
 		burst.setMinManaLoss(40);
 		burst.setManaLossPerTick(4F);
 		burst.setGravity(0F);
@@ -118,7 +113,7 @@ public class TerraBladeItem extends ManasteelSwordItem implements LensEffectItem
 			}
 
 			if (living.hurtTime == 0) {
-				int cost = MANA_PER_DAMAGE / 3;
+				int cost = BURST_MANA / 3;
 				int mana = burst.getMana();
 				if (mana >= cost) {
 					burst.setMana(mana - cost);

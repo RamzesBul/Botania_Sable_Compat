@@ -140,11 +140,6 @@ public interface XplatAbstractions {
 
 	// Registrations
 	void registerReloadListener(PackType type, ResourceLocation id, PreparableReloadListener listener);
-	Item.Properties defaultItemBuilder();
-
-	default Item.Properties defaultItemBuilderWithCustomDamageOnFabric() {
-		return defaultItemBuilder();
-	}
 
 	/**
 	 * NeoForge allows items to opt out of craft-repairing using the builder.

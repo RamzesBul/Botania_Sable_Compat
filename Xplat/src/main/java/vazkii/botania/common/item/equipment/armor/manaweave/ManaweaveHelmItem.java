@@ -32,9 +32,4 @@ public class ManaweaveHelmItem extends ManaweaveArmorItem implements ManaDiscoun
 	public boolean shouldGiveProficiency(ItemStack stack, EquipmentSlot slot, Player player, ItemStack rod) {
 		return hasArmorSet(player);
 	}
-
-	@Override
-	protected int getManaPerDamage() {
-		return 30;
-	}
 }

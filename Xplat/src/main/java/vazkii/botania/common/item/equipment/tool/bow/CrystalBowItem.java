@@ -9,17 +9,18 @@
 package vazkii.botania.common.item.equipment.tool.bow;
 
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
+import net.minecraft.util.Unit;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.item.ArrowItem;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -27,114 +28,89 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 
-import org.jetbrains.annotations.Nullable;
-
 import vazkii.botania.api.mana.ManaItemHandler;
-import vazkii.botania.common.item.equipment.tool.ToolCommons;
+import vazkii.botania.common.component.BotaniaDataComponents;
 
-import java.util.function.Consumer;
+import java.util.List;
 
-// TODO compare vanilla bow with copied parts in here! I'm very sure several things could be updated here
-public class CrystalBowItem extends LivingwoodBowItem {
+public class CrystalBowItem extends BowItem {
 
-	private static final int ARROW_COST = 200;
+	// unenchanted base cost per shot: arrow conjuration + damage prevention = 200
+	private static final int ARROW_COST = 160;
+	// typical end-game cost without armor bonus: infinity + unbreaking 3 = 90
+	private static final int INFINITY_ARROW_COST = 80;
 
-	public CrystalBowItem(Properties builder) {
-		super(builder);
+	public CrystalBowItem(Properties properties) {
+		super(properties);
 	}
 
-	// [VanillaCopy] super
+	// [VanillaCopy] BowItem::use
 	@Override
-	public InteractionResultHolder<ItemStack> use(Level worldIn, Player playerIn, InteractionHand handIn) {
-		ItemStack itemstack = playerIn.getItemInHand(handIn);
-		boolean canMaterializeArrow = canFire(itemstack, playerIn); // Botania - custom check
-
-		if (!playerIn.hasInfiniteMaterials() && !canMaterializeArrow) {
-			return InteractionResultHolder.fail(itemstack);
-		} else {
-			playerIn.startUsingItem(handIn);
-			return InteractionResultHolder.consume(itemstack);
+	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+		ItemStack itemStack = player.getItemInHand(hand);
+		boolean foundProjectile = !getProjectile(itemStack, player).isEmpty(); // Botania - check conjuration option
+		if (!player.hasInfiniteMaterials() && !foundProjectile) {
+			return InteractionResultHolder.fail(itemStack);
 		}
+
+		player.startUsingItem(hand);
+		return InteractionResultHolder.consume(itemStack);
 	}
 
-	// [VanillaCopy] BowItem
+	// [VanillaCopy] BowItem::releaseUsing
 	@Override
 	public void releaseUsing(ItemStack stack, Level level, LivingEntity entityLiving, int timeLeft) {
 		if (entityLiving instanceof Player player) {
-			boolean canMaterializeArrow = canFire(stack, player); // Botania - custom check
-			ItemStack arrowStack = player.getProjectile(stack);
-
-			int i = (int) ((getUseDuration(stack, entityLiving) - timeLeft) * chargeVelocityMultiplier()); // Botania - velocity multiplier
-			if (i < 0) {
+			ItemStack projectile = getProjectile(stack, player); // Botania - potentially conjure an arrow
+			if (projectile.isEmpty()) {
 				return;
 			}
 
-			if (!arrowStack.isEmpty() || canMaterializeArrow) {
-				if (arrowStack.isEmpty()) {
-					arrowStack = new ItemStack(Items.ARROW);
-				}
-
-				float power = getPowerForTime(i);
-				if (!((double) power < 0.1D)) {
-					boolean markUnpickable = player.hasInfiniteMaterials() || arrowStack.is(Items.ARROW); // Botania
-					if (!level.isClientSide()) {
-						ArrowItem arrowItem = (ArrowItem) (arrowStack.getItem() instanceof ArrowItem ? arrowStack.getItem() : Items.ARROW);
-						AbstractArrow arrow = arrowItem.createArrow(level, arrowStack, player, stack);
-						arrow.shootFromRotation(player, player.getXRot(), player.getYRot(), 0.0F, power * 3.0F, 1.0F);
-						if (power == 1.0F) {
-							arrow.setCritArrow(true);
-						}
-
-						var enchantLookup = player.level().holderLookup(Registries.ENCHANTMENT);
-
-						int powerEnch = EnchantmentHelper.getItemEnchantmentLevel(enchantLookup.getOrThrow(Enchantments.POWER), stack);
-						if (powerEnch > 0) {
-							arrow.setBaseDamage(arrow.getBaseDamage() + (double) powerEnch * 0.5D + 0.5D);
-						}
-
-						if (EnchantmentHelper.getItemEnchantmentLevel(enchantLookup.getOrThrow(Enchantments.FLAME), stack) > 0) {
-							arrow.setRemainingFireTicks(100 * 20);
-						}
-
-						if (markUnpickable || player.hasInfiniteMaterials() && (arrowStack.is(Items.SPECTRAL_ARROW) || arrowStack.is(Items.TIPPED_ARROW))) {
-							arrow.pickup = AbstractArrow.Pickup.CREATIVE_ONLY;
-						}
-
-						level.addFreshEntity(arrow);
-					}
-
-					level.playSound(null, player.getX(), player.getY(), player.getZ(),
-							SoundEvents.ARROW_SHOOT, SoundSource.PLAYERS,
-							1.0F, 1.0F / (player.getRandom().nextFloat() * 0.4F + 1.2F) + power * 0.5F);
-					if (!markUnpickable && !player.hasInfiniteMaterials()) {
-						arrowStack.shrink(1);
-						if (arrowStack.isEmpty()) {
-							player.getInventory().removeItem(arrowStack);
-						}
-					}
-
-					player.awardStat(Stats.ITEM_USED.get(this));
-				}
+			int timeHeld = (this.getUseDuration(stack, entityLiving) - timeLeft) * 2; // Botania - twice the draw speed
+			float pow = getPowerForTime(timeHeld);
+			if (pow < 0.1
+					// Botania - consume mana if firing conjured projectile
+					|| projectile.has(BotaniaDataComponents.CONJURED_PROJECTILE) && !ManaItemHandler.instance()
+							.requestManaExactForTool(stack, player, getArrowCost(stack, player.level()), true)) {
+				return;
 			}
+
+			List<ItemStack> firedProjectiles = draw(stack, projectile, player);
+			if (level instanceof ServerLevel serverLevel && !firedProjectiles.isEmpty()) {
+				this.shoot(serverLevel, player, player.getUsedItemHand(), stack, firedProjectiles,
+						pow * 3, 1, pow == 1, null);
+			}
+
+			level.playSound(
+					null,
+					player.getX(),
+					player.getY(),
+					player.getZ(),
+					SoundEvents.ARROW_SHOOT,
+					SoundSource.PLAYERS,
+					1,
+					1f / (level.getRandom().nextFloat() * 0.4f + 1.2f) + pow * 0.5f
+			);
+			player.awardStat(Stats.ITEM_USED.get(this));
 		}
 	}
 
-	@Override
-	public float chargeVelocityMultiplier() {
-		return 2F;
+	protected ItemStack getProjectile(ItemStack stack, Player player) {
+		ItemStack projectile = player.getProjectile(stack);
+		if ((projectile.isEmpty() || projectile.is(Items.ARROW)) && ManaItemHandler.instance()
+				.requestManaExactForTool(stack, player, getArrowCost(stack, player.level()), false)) {
+			// player has mana, fire a conjured arrow if player doesn't have special arrows
+			ItemStack conjuredArrow = new ItemStack(Items.ARROW);
+			conjuredArrow.set(DataComponents.INTANGIBLE_PROJECTILE, Unit.INSTANCE);
+			conjuredArrow.set(BotaniaDataComponents.CONJURED_PROJECTILE, Unit.INSTANCE);
+			return conjuredArrow;
+		}
+		return projectile;
 	}
 
-	private boolean canFire(ItemStack stack, Player player) {
-		HolderLookup<Enchantment> enchLookup = player.level().holderLookup(Registries.ENCHANTMENT);
-		boolean infinity = EnchantmentHelper.getItemEnchantmentLevel(enchLookup.getOrThrow(Enchantments.INFINITY), stack) > 0;
-		return player.hasInfiniteMaterials() || ManaItemHandler.instance().requestManaExactForTool(stack, player, ARROW_COST / (infinity ? 2 : 1), false);
+	public int getArrowCost(ItemStack stack, Level level) {
+		HolderLookup<Enchantment> lookup = level.holderLookup(Registries.ENCHANTMENT);
+		boolean infinity = EnchantmentHelper.getItemEnchantmentLevel(lookup.getOrThrow(Enchantments.INFINITY), stack) > 0;
+		return infinity ? INFINITY_ARROW_COST : ARROW_COST;
 	}
-
-	@Override
-	public <T extends LivingEntity> int damageItem(ItemStack stack, int amount, @Nullable T entity, Consumer<Item> breakCallback) {
-		HolderLookup<Enchantment> enchLookup = entity.level().holderLookup(Registries.ENCHANTMENT);
-		boolean infinity = EnchantmentHelper.getItemEnchantmentLevel(enchLookup.getOrThrow(Enchantments.INFINITY), stack) > 0;
-		return ToolCommons.damageItemIfPossible(stack, amount, entity, ARROW_COST / (infinity ? 2 : 1));
-	}
-
 }

@@ -10,30 +10,19 @@ package vazkii.botania.common.item.equipment.tool.manasteel;
 
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-
-import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.item.SortableTool;
-import vazkii.botania.api.mana.ManaItemHandler;
 import vazkii.botania.client.gui.ItemsRemainingRenderHandler;
 import vazkii.botania.common.helper.PlayerHelper;
-import vazkii.botania.common.item.equipment.CustomDamageItem;
 import vazkii.botania.common.item.equipment.tool.ToolCommons;
 import vazkii.botania.common.lib.BotaniaTags;
 
-import java.util.function.Consumer;
-
-public class ManasteelAxeItem extends AxeItem implements CustomDamageItem, SortableTool {
-
-	private static final int MANA_PER_DAMAGE = 60;
+public class ManasteelAxeItem extends AxeItem implements SortableTool {
 
 	public ManasteelAxeItem(Properties props) {
 		this(BotaniaAPI.instance().getManasteelItemTier(), props.attributes(ManasteelAxeItem.createAttributes(BotaniaAPI.instance().getManasteelItemTier(), 6F, -3.1F)));
@@ -41,16 +30,6 @@ public class ManasteelAxeItem extends AxeItem implements CustomDamageItem, Sorta
 
 	public ManasteelAxeItem(Tier tier, Properties properties) {
 		super(tier, properties);
-	}
-
-	@Override
-	public <T extends LivingEntity> int damageItem(ItemStack stack, int amount, @Nullable T entity, Consumer<Item> breakCallback) {
-		int manaPerDamage = ((ManasteelAxeItem) stack.getItem()).getManaPerDamage();
-		return ToolCommons.damageItemIfPossible(stack, amount, entity, manaPerDamage);
-	}
-
-	public int getManaPerDamage() {
-		return MANA_PER_DAMAGE;
 	}
 
 	@Override
@@ -77,14 +56,6 @@ public class ManasteelAxeItem extends AxeItem implements CustomDamageItem, Sorta
 		}
 
 		return super.useOn(context);
-	}
-
-	@Override
-	public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-		if (!level.isClientSide && entity instanceof Player player && stack.getDamageValue() > 0
-				&& ManaItemHandler.instance().requestManaExactForTool(stack, player, getManaPerDamage() * 2, true)) {
-			stack.setDamageValue(stack.getDamageValue() - 1);
-		}
 	}
 
 	@Override

@@ -39,6 +39,7 @@ import vazkii.botania.common.BotaniaStats;
 import vazkii.botania.common.block.BotaniaBlocks;
 import vazkii.botania.common.block.mana.ManaPoolBlock;
 import vazkii.botania.common.component.BotaniaDataComponents;
+import vazkii.botania.common.component.ManaRepair;
 import vazkii.botania.common.helper.ColorHelper;
 import vazkii.botania.common.item.brew.BaseBrewItem;
 import vazkii.botania.common.item.brew.FlaskItem;
@@ -57,7 +58,6 @@ import vazkii.botania.common.item.equipment.tool.StarcallerItem;
 import vazkii.botania.common.item.equipment.tool.ThundercallerItem;
 import vazkii.botania.common.item.equipment.tool.VitreousPickaxeItem;
 import vazkii.botania.common.item.equipment.tool.bow.CrystalBowItem;
-import vazkii.botania.common.item.equipment.tool.bow.LivingwoodBowItem;
 import vazkii.botania.common.item.equipment.tool.elementium.*;
 import vazkii.botania.common.item.equipment.tool.manasteel.*;
 import vazkii.botania.common.item.equipment.tool.terrasteel.TerraBladeItem;
@@ -276,123 +276,132 @@ public final class BotaniaItems {
 
 	// Equipment
 	public static final int MANASTEEL_DURABILITY_FACTOR = 18;
+	public static final int MANA_PER_DAMAGE_METAL_ARMOR = 70;
+	public static final int MANA_PER_DAMAGE_MANAWEAVE_ARMOR = 30;
+	public static final int MANA_PER_DAMAGE_MANASTEEL_TOOL = 60;
+	public static final int MANA_PER_DAMAGE_ELEMENTIUM_TOOL = 60;
+	public static final int MANA_PER_DAMAGE_TERRASTEEL_TOOL = 100;
+	public static final int MANA_PER_DAMAGE_UPGRADED_SWORD = 120;
+	public static final int MANA_PER_DAMAGE_VITREOUS_TOOL = 160;
+	public static final int MANA_PER_DAMAGE_SHEARS = 30;
+	public static final int MANA_PER_DAMAGE_BOW = 40;
 	public static final Item MANASTEEL_HELMET = make(LibItemNames.MANASTEEL_HELMET,
-			new ManasteelHelmItem(unstackableCustomDamage()
+			new ManasteelHelmItem(manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.HELMET.getDurability(MANASTEEL_DURABILITY_FACTOR))));
 	public static final Item MANASTEEL_CHESTPLATE = make(LibItemNames.MANASTEEL_CHESTPLATE,
-			new ManasteelArmorItem(ArmorItem.Type.CHESTPLATE, unstackableCustomDamage()
+			new ManasteelArmorItem(ArmorItem.Type.CHESTPLATE, manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.CHESTPLATE.getDurability(MANASTEEL_DURABILITY_FACTOR))));
 	public static final Item MANASTEEL_LEGGINGS = make(LibItemNames.MANASTEEL_LEGGINGS,
-			new ManasteelArmorItem(ArmorItem.Type.LEGGINGS, unstackableCustomDamage()
+			new ManasteelArmorItem(ArmorItem.Type.LEGGINGS, manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.LEGGINGS.getDurability(MANASTEEL_DURABILITY_FACTOR))));
 	public static final Item MANASTEEL_BOOTS = make(LibItemNames.MANASTEEL_BOOTS,
-			new ManasteelArmorItem(ArmorItem.Type.BOOTS, unstackableCustomDamage()
+			new ManasteelArmorItem(ArmorItem.Type.BOOTS, manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.BOOTS.getDurability(MANASTEEL_DURABILITY_FACTOR))));
 	public static final Item MANASTEEL_PICKAXE = make(LibItemNames.MANASTEEL_PICKAXE,
-			new ManasteelPickaxeItem(unstackableCustomDamage()));
+			new ManasteelPickaxeItem(manaRepairable(MANA_PER_DAMAGE_MANASTEEL_TOOL)));
 	public static final Item MANASTEEL_SHOVEL = make(LibItemNames.MANASTEEL_SHOVEL,
-			new ManasteelShovelItem(unstackableCustomDamage()));
+			new ManasteelShovelItem(manaRepairable(MANA_PER_DAMAGE_MANASTEEL_TOOL)));
 	public static final Item MANASTEEL_AXE = make(LibItemNames.MANASTEEL_AXE,
-			new ManasteelAxeItem(unstackableCustomDamage()));
+			new ManasteelAxeItem(manaRepairable(MANA_PER_DAMAGE_MANASTEEL_TOOL)));
 	public static final Item MANASTEEL_HOE = make(LibItemNames.MANASTEEL_HOE,
-			new ManasteelHoeItem(unstackableCustomDamage()));
+			new ManasteelHoeItem(manaRepairable(MANA_PER_DAMAGE_MANASTEEL_TOOL)));
 	public static final Item MANASTEEL_SWORD = make(LibItemNames.MANASTEEL_SWORD,
-			new ManasteelSwordItem(unstackableCustomDamage()));
+			new ManasteelSwordItem(manaRepairable(MANA_PER_DAMAGE_MANASTEEL_TOOL)));
 	public static final int SHEARS_DURABILITY = 238;
 	public static final Item MANASTEEL_SHEARS = make(LibItemNames.MANASTEEL_SHEARS,
-			new ManasteelShearsItem(unstackableCustomDamage()
+			new ManasteelShearsItem(manaRepairable(MANA_PER_DAMAGE_SHEARS)
 					.durability(SHEARS_DURABILITY)
 					.component(DataComponents.TOOL, ShearsItem.createToolProperties())));
 	public static final int ELEMENTIUM_DURABILITY_FACTOR = 18;
 	public static final Item ELEMENTIUM_HELMET = make(LibItemNames.ELEMENTIUM_HELMET,
-			new ElementiumHelmItem(0.11, unstackableCustomDamage()
+			new ElementiumHelmItem(0.11, manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.HELMET.getDurability(ELEMENTIUM_DURABILITY_FACTOR))));
 	public static final Item ELEMENTIUM_CHESTPLATE = make(LibItemNames.ELEMENTIUM_CHESTPLATE,
-			new ElementiumArmorItem(ArmorItem.Type.CHESTPLATE, 0.17, unstackableCustomDamage()
+			new ElementiumArmorItem(ArmorItem.Type.CHESTPLATE, 0.17, manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.CHESTPLATE.getDurability(ELEMENTIUM_DURABILITY_FACTOR))));
 	public static final Item ELEMENTIUM_LEGGINGS = make(LibItemNames.ELEMENTIUM_LEGGINGS,
-			new ElementiumArmorItem(ArmorItem.Type.LEGGINGS, 0.15, unstackableCustomDamage()
+			new ElementiumArmorItem(ArmorItem.Type.LEGGINGS, 0.15, manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.LEGGINGS.getDurability(ELEMENTIUM_DURABILITY_FACTOR))));
 	public static final Item ELEMENTIUM_BOOTS = make(LibItemNames.ELEMENTIUM_BOOTS,
-			new ElementiumArmorItem(ArmorItem.Type.BOOTS, 0.09, unstackableCustomDamage()
+			new ElementiumArmorItem(ArmorItem.Type.BOOTS, 0.09, manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.BOOTS.getDurability(ELEMENTIUM_DURABILITY_FACTOR))));
 	public static final Item ELEMENTIUM_PICKAXE = make(LibItemNames.ELEMENTIUM_PICKAXE,
-			new ElementiumPickaxeItem(unstackableCustomDamage()));
+			new ElementiumPickaxeItem(manaRepairable(MANA_PER_DAMAGE_ELEMENTIUM_TOOL)));
 	public static final Item ELEMENTIUM_SHOVEL = make(LibItemNames.ELEMENTIUM_SHOVEL,
-			new ElementiumShovelItem(unstackableCustomDamage()));
+			new ElementiumShovelItem(manaRepairable(MANA_PER_DAMAGE_ELEMENTIUM_TOOL)));
 	public static final Item ELEMENTIUM_AXE = make(LibItemNames.ELEMENTIUM_AXE,
-			new ElementiumAxeItem(unstackableCustomDamage()));
+			new ElementiumAxeItem(manaRepairable(MANA_PER_DAMAGE_ELEMENTIUM_TOOL)));
 	public static final Item ELEMENTIUM_HOE = make(LibItemNames.ELEMENTIUM_HOE,
-			new ElementiumHoeItem(unstackableCustomDamage()));
+			new ElementiumHoeItem(manaRepairable(MANA_PER_DAMAGE_ELEMENTIUM_TOOL)));
 	public static final Item ELEMENTIUM_SWORD = make(LibItemNames.ELEMENTIUM_SWORD,
-			new ElementiumSwordItem(unstackableCustomDamage()));
+			new ElementiumSwordItem(manaRepairable(MANA_PER_DAMAGE_ELEMENTIUM_TOOL)));
 	public static final Item ELEMENTIUM_SHEARS = make(LibItemNames.ELEMENTIUM_SHEARS,
-			new ElementiumShearsItem(unstackableCustomDamage()
+			new ElementiumShearsItem(manaRepairable(MANA_PER_DAMAGE_ELEMENTIUM_TOOL)
 					.durability(SHEARS_DURABILITY)
 					.component(DataComponents.TOOL, ShearsItem.createToolProperties())));
 	public static final int TERRASTEEL_DURABILITY_FACTOR = 34;
 	public static final Item TERRASTEEL_HELMET = make(LibItemNames.TERRASTEEL_HELMET,
-			new TerrasteelHelmItem(unstackableCustomDamage()
+			new TerrasteelHelmItem(manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.HELMET.getDurability(TERRASTEEL_DURABILITY_FACTOR))
 					.fireResistant()
 					.rarity(Rarity.UNCOMMON)));
 	public static final Item TERRASTEEL_CHESTPLATE = make(LibItemNames.TERRASTEEL_CHESTPLATE,
-			new TerrasteelArmorItem(ArmorItem.Type.CHESTPLATE, unstackableCustomDamage()
+			new TerrasteelArmorItem(ArmorItem.Type.CHESTPLATE, manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.CHESTPLATE.getDurability(TERRASTEEL_DURABILITY_FACTOR))
 					.fireResistant()
 					.rarity(Rarity.UNCOMMON)));
 	public static final Item TERRASTEEL_LEGGINGS = make(LibItemNames.TERRASTEEL_LEGGINGS,
-			new TerrasteelArmorItem(ArmorItem.Type.LEGGINGS, unstackableCustomDamage()
+			new TerrasteelArmorItem(ArmorItem.Type.LEGGINGS, manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.LEGGINGS.getDurability(TERRASTEEL_DURABILITY_FACTOR))
 					.fireResistant()
 					.rarity(Rarity.UNCOMMON)));
 	public static final Item TERRASTEEL_BOOTS = make(LibItemNames.TERRASTEEL_BOOTS,
-			new TerrasteelArmorItem(ArmorItem.Type.BOOTS, unstackableCustomDamage()
+			new TerrasteelArmorItem(ArmorItem.Type.BOOTS, manaRepairable(MANA_PER_DAMAGE_METAL_ARMOR)
 					.durability(ArmorItem.Type.BOOTS.getDurability(TERRASTEEL_DURABILITY_FACTOR))
 					.fireResistant()
 					.rarity(Rarity.UNCOMMON)));
 	public static final Item TERRA_SHATTERER = make(LibItemNames.TERRA_SHATTERER,
-			new TerraShattererItem(unstackableCustomDamage()
+			new TerraShattererItem(manaRepairable(MANA_PER_DAMAGE_TERRASTEEL_TOOL)
 					.fireResistant()
 					.rarity(Rarity.UNCOMMON)
 					.component(BotaniaDataComponents.MAX_MANA, TerraShattererItem.MAX_MANA)
 					.component(BotaniaDataComponents.CAN_RECEIVE_MANA_FROM_POOL, Unit.INSTANCE)));
 	public static final Item TERRA_TRUNCATOR = make(LibItemNames.TERRA_TRUNCATOR,
-			new TerraTruncatorItem(unstackableCustomDamage()
+			new TerraTruncatorItem(manaRepairable(MANA_PER_DAMAGE_TERRASTEEL_TOOL)
 					.fireResistant()
 					.rarity(Rarity.UNCOMMON)));
 	public static final Item TERRA_BLADE = make(LibItemNames.TERRA_BLADE,
-			new TerraBladeItem(unstackableCustomDamage()
+			new TerraBladeItem(manaRepairable(MANA_PER_DAMAGE_TERRASTEEL_TOOL)
 					.fireResistant()
 					.rarity(Rarity.UNCOMMON)));
 	public static final Item STARCALLER = make(LibItemNames.STARCALLER,
-			new StarcallerItem(unstackableCustomDamage().rarity(Rarity.UNCOMMON)));
+			new StarcallerItem(manaRepairable(MANA_PER_DAMAGE_UPGRADED_SWORD).rarity(Rarity.UNCOMMON)));
 	public static final Item THUNDERCALLER = make(LibItemNames.THUNDERCALLER,
-			new ThundercallerItem(unstackableCustomDamage().rarity(Rarity.UNCOMMON)));
+			new ThundercallerItem(manaRepairable(MANA_PER_DAMAGE_UPGRADED_SWORD).rarity(Rarity.UNCOMMON)));
 	public static final int MANAWEAVE_DURABILITY_FACTOR = 5;
 	public static final Item MANAWEAVE_HELMET = make(LibItemNames.MANAWEAVE_HELMET,
-			new ManaweaveHelmItem(unstackableCustomDamage()
+			new ManaweaveHelmItem(manaRepairable(MANA_PER_DAMAGE_MANAWEAVE_ARMOR)
 					.durability(ArmorItem.Type.HELMET.getDurability(MANAWEAVE_DURABILITY_FACTOR))));
 	public static final Item MANAWEAVE_CHESTPLATE = make(LibItemNames.MANAWEAVE_CHESTPLATE,
-			new ManaweaveArmorItem(ArmorItem.Type.CHESTPLATE, unstackableCustomDamage()
+			new ManaweaveArmorItem(ArmorItem.Type.CHESTPLATE, manaRepairable(MANA_PER_DAMAGE_MANAWEAVE_ARMOR)
 					.durability(ArmorItem.Type.CHESTPLATE.getDurability(MANAWEAVE_DURABILITY_FACTOR))));
 	public static final Item MANAWEAVE_LEGGINGS = make(LibItemNames.MANAWEAVE_LEGGINGS,
-			new ManaweaveArmorItem(ArmorItem.Type.LEGGINGS, unstackableCustomDamage()
+			new ManaweaveArmorItem(ArmorItem.Type.LEGGINGS, manaRepairable(MANA_PER_DAMAGE_MANAWEAVE_ARMOR)
 					.durability(ArmorItem.Type.LEGGINGS.getDurability(MANAWEAVE_DURABILITY_FACTOR))));
 	public static final Item MANAWEAVE_BOOTS = make(LibItemNames.MANAWEAVE_BOOTS,
-			new ManaweaveArmorItem(ArmorItem.Type.BOOTS, unstackableCustomDamage()
+			new ManaweaveArmorItem(ArmorItem.Type.BOOTS, manaRepairable(MANA_PER_DAMAGE_MANAWEAVE_ARMOR)
 					.durability(ArmorItem.Type.BOOTS.getDurability(MANAWEAVE_DURABILITY_FACTOR))));
 	public static final Item SOULSCRIBE = make(LibItemNames.SOULSCRIBE,
-			new SoulscribeItem(unstackable()
+			new SoulscribeItem(defaultBuilder() // no mana repair
 					.durability(69))); // What you looking at?
 	public static final Item VITREOUS_PICKAXE = make(LibItemNames.VITREOUS_PICKAXE,
-			new VitreousPickaxeItem(unstackableCustomDamage()));
-	public static final int BOW_DURABILITY = 500; // (vanilla bow is 384)
+			new VitreousPickaxeItem(manaRepairable(MANA_PER_DAMAGE_VITREOUS_TOOL)));
+	public static final int BOW_DURABILITY = 384; // like vanilla
 	public static final Item LIVINGWOOD_BOW = make(LibItemNames.LIVINGWOOD_BOW,
-			new LivingwoodBowItem(defaultBuilderCustomDamage()
+			new BowItem(manaRepairable(MANA_PER_DAMAGE_BOW)
 					.durability(BOW_DURABILITY)));
 	public static final Item CRYSTAL_BOW = make(LibItemNames.CRYSTAL_BOW,
-			new CrystalBowItem(defaultBuilderCustomDamage()
+			new CrystalBowItem(manaRepairable(MANA_PER_DAMAGE_BOW)
 					.durability(BOW_DURABILITY)));
 	public static final int CHAKRAM_STACK_SIZE = 6;
 	public static final Item THORN_CHAKRAM = make(LibItemNames.THORN_CHAKRAM,
@@ -870,17 +879,12 @@ public final class BotaniaItems {
 	}
 
 	public static Item.Properties defaultBuilder() {
-		return XplatAbstractions.INSTANCE.defaultItemBuilder();
+		return new Item.Properties();
 	}
 
-	// NeoForge does custom damage by just implementing a method on Item,
-	// Fabric does it by an extra lambda to the Properties object
-	public static Item.Properties defaultBuilderCustomDamage() {
-		return XplatAbstractions.INSTANCE.defaultItemBuilderWithCustomDamageOnFabric();
-	}
-
-	public static Item.Properties unstackableCustomDamage() {
-		return defaultBuilderCustomDamage().stacksTo(1);
+	public static Item.Properties manaRepairable(int manaPerDamage) {
+		return defaultBuilder()
+				.component(BotaniaDataComponents.MANA_REPAIR, new ManaRepair(manaPerDamage, 2 * manaPerDamage));
 	}
 
 	private static Item.Properties stackTo16() {

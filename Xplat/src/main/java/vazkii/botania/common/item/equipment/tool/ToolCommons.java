@@ -36,6 +36,8 @@ import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.mana.ManaItemHandler;
+import vazkii.botania.common.component.BotaniaDataComponents;
+import vazkii.botania.common.component.ManaRepair;
 import vazkii.botania.common.item.BotaniaItems;
 import vazkii.botania.common.item.equipment.tool.terrasteel.TerraShattererItem;
 
@@ -48,22 +50,20 @@ public final class ToolCommons {
 	/**
 	 * Consumes as much mana as possible, returning the amount of damage that couldn't be paid with mana
 	 */
-	public static int damageItemIfPossible(ItemStack stack, int amount, @Nullable LivingEntity entity, int manaPerDamage) {
+	public static int absorbDamageWithMana(ItemStack stack, int amount, @Nullable LivingEntity entity) {
+
 		if (!(entity instanceof Player player) || amount <= 0) {
 			return amount;
 		}
 
-		final int unbreaking = EnchantmentHelper.getItemEnchantmentLevel(player.level().holderLookup(Registries.ENCHANTMENT).getOrThrow(Enchantments.UNBREAKING), stack);
+		ManaRepair manaRepair = stack.get(BotaniaDataComponents.MANA_REPAIR);
+		if (manaRepair == null || manaRepair.manaPerPreventedDamage() == 0) {
+			return amount;
+		}
 
-		while (amount > 0) {
-			if (ManaItemHandler.instance().requestManaExactForTool(stack, player, manaPerDamage, false)) {
-				if (player.level().getRandom().nextInt(unbreaking + 1) == 0) {
-					ManaItemHandler.instance().requestManaExactForTool(stack, player, manaPerDamage, true);
-				}
-				amount--;
-			} else {
-				break;
-			}
+		while (amount > 0 && ManaItemHandler.instance()
+				.requestManaExactForTool(stack, player, manaRepair.manaPerPreventedDamage(), true)) {
+			amount--;
 		}
 
 		return amount;

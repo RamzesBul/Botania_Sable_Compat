@@ -17,31 +17,23 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
-import net.minecraft.world.level.Level;
-
-import org.jetbrains.annotations.Nullable;
 
 import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.item.PhantomInkable;
-import vazkii.botania.api.mana.ManaItemHandler;
 import vazkii.botania.client.gui.TooltipHandler;
 import vazkii.botania.client.lib.ResourcesLib;
 import vazkii.botania.common.annotations.SoftImplement;
 import vazkii.botania.common.component.BotaniaDataComponents;
 import vazkii.botania.common.helper.DataComponentHelper;
 import vazkii.botania.common.item.BotaniaItems;
-import vazkii.botania.common.item.equipment.CustomDamageItem;
-import vazkii.botania.common.item.equipment.tool.ToolCommons;
 import vazkii.botania.common.proxy.Proxy;
 
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class ManasteelArmorItem extends ArmorItem implements CustomDamageItem, PhantomInkable {
+public class ManasteelArmorItem extends ArmorItem implements PhantomInkable {
 
 	public final Type type;
 
@@ -52,24 +44,6 @@ public class ManasteelArmorItem extends ArmorItem implements CustomDamageItem, P
 	public ManasteelArmorItem(Type type, Holder<ArmorMaterial> material, Properties properties) {
 		super(material, type, properties);
 		this.type = type;
-	}
-
-	@Override
-	public void inventoryTick(ItemStack stack, Level world, Entity entity, int slot, boolean selected) {
-		if (entity instanceof Player player) {
-			if (!world.isClientSide && stack.getDamageValue() > 0 && ManaItemHandler.instance().requestManaExact(stack, player, getManaPerDamage() * 2, true)) {
-				stack.setDamageValue(stack.getDamageValue() - 1);
-			}
-		}
-	}
-
-	@Override
-	public <T extends LivingEntity> int damageItem(ItemStack stack, int amount, @Nullable T entity, Consumer<Item> breakCallback) {
-		return ToolCommons.damageItemIfPossible(stack, amount, entity, getManaPerDamage());
-	}
-
-	protected int getManaPerDamage() {
-		return 70;
 	}
 
 	@SoftImplement("IItemExtension")

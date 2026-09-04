@@ -65,7 +65,6 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BucketItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
@@ -112,7 +111,6 @@ import vazkii.botania.api.fabric.recipe.ElvenPortalUpdateCallback;
 import vazkii.botania.api.mana.*;
 import vazkii.botania.common.block.block_entity.red_string.RedStringContainerBlockEntity;
 import vazkii.botania.common.handler.EquipmentHandler;
-import vazkii.botania.common.item.equipment.CustomDamageItem;
 import vazkii.botania.common.lib.BotaniaTags;
 import vazkii.botania.common.proxy.Proxy;
 import vazkii.botania.fabric.block_entity.FabricRedStringContainerBlockEntity;
@@ -451,22 +449,6 @@ public class FabricXplatImpl implements XplatAbstractions {
 			public ResourceLocation getFabricId() {
 				return id;
 			}
-		});
-	}
-
-	@Override
-	public Item.Properties defaultItemBuilder() {
-		return new Item.Properties();
-	}
-
-	@Override
-	public Item.Properties defaultItemBuilderWithCustomDamageOnFabric() {
-		return defaultItemBuilder().customDamage((stack, amount, entity, slot, breakCallback) -> {
-			var item = stack.getItem();
-			if (item instanceof CustomDamageItem cd) {
-				return cd.damageItem(stack, amount, entity, i -> breakCallback.run());
-			}
-			return amount;
 		});
 	}
 
