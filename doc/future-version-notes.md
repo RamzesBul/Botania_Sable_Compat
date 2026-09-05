@@ -184,7 +184,7 @@ Features in older versions are mentioned if there are issues or no real interact
   * new textures may be necessary for livingwood/dreamwood signs
 * Vulkan rendering API (as option for now)
 
-### 26.3 (as far as is known at this point)
+### 26.3 ("Wilderness Bound")
 * Dappled Forest biome
   * poplar trees and wood set (three different, but random leaves variants, from a single sapling type)
 * shelf mushroom
