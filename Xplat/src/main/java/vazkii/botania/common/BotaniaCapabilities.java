@@ -48,6 +48,7 @@ public final class BotaniaCapabilities {
 	 *           while on Fabric this is implemented using the various registerFallback methods.
 	 */
 	public static void registerCapabilityFallbackProviders(ApiProviderRegistration registration) {
+		ItemCapabilities.registerFallbackProviders(registration);
 		BlockCapabilities.registerFallbackProviders(registration);
 	}
 

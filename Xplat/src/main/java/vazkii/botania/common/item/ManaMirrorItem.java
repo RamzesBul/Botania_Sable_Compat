@@ -110,7 +110,7 @@ public class ManaMirrorItem extends Item {
 	}
 
 	protected static void setMaxMana(ItemStack stack, int maxMana) {
-		DataComponentHelper.setIntNonZero(stack, BotaniaDataComponents.MAX_MANA, maxMana);
+		DataComponentHelper.setIntNonNegative(stack, BotaniaDataComponents.MAX_MANA, maxMana);
 	}
 
 	protected static int getManaBacklog(ItemStack stack) {

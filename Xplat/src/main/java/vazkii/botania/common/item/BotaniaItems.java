@@ -511,6 +511,7 @@ public final class BotaniaItems {
 	public static final Item MANA_MIRROR = make(LibItemNames.MANA_MIRROR,
 			new ManaMirrorItem(unstackable()
 					.rarity(Rarity.UNCOMMON)
+					.component(BotaniaDataComponents.MAX_MANA, 0)
 					.component(BotaniaDataComponents.MANA_BACKLOG, 0)
 					.component(BotaniaDataComponents.CAN_PROVIDE_MANA_TO_ITEMS, Unit.INSTANCE)));
 	public static final Item MANA_BLASTER = make(LibItemNames.MANA_BLASTER,

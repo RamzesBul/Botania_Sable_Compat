@@ -11,6 +11,7 @@ package vazkii.botania.api.neoforge;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.neoforge.capabilities.BlockCapability;
@@ -273,7 +274,12 @@ public final class BotaniaNeoForgeCapabilities {
 				ItemCapability<A, Void> capability = BotaniaNeoForgeCapabilities.getItemApiLookupById(apiId);
 				for (ItemRegistrationNoContext<A> registration : registrations) {
 					registration.apply(
-							(provider, items) -> e.registerItem(capability, provider::getApi, items)
+							(provider, items) -> e.registerItem(capability, provider::getApi, items),
+							(provider, predicate) -> {
+								// This is the recommended way in NeoForge:
+								ItemLike[] matchingItems = BuiltInRegistries.ITEM.stream().toArray(ItemLike[]::new);
+								e.registerItem(capability, provider.withPredicate(predicate)::getApi, matchingItems);
+							}
 					);
 				}
 			}
@@ -284,7 +290,12 @@ public final class BotaniaNeoForgeCapabilities {
 				ItemCapability<A, C> capability = BotaniaNeoForgeCapabilities.getItemApiLookupById(apiId);
 				for (ItemRegistrationWithContext<A, C> registration : registrations) {
 					registration.apply(
-							(provider, items) -> e.registerItem(capability, provider::getApi, items)
+							(provider, items) -> e.registerItem(capability, provider::getApi, items),
+							(provider, predicate) -> {
+								// This is the recommended way in NeoForge:
+								ItemLike[] matchingItems = BuiltInRegistries.ITEM.stream().toArray(ItemLike[]::new);
+								e.registerItem(capability, provider.withPredicate(predicate)::getApi, matchingItems);
+							}
 					);
 				}
 			}

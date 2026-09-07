@@ -9,6 +9,7 @@
 
 package vazkii.botania.common.capabilities;
 
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 
@@ -22,6 +23,7 @@ import vazkii.botania.api.item.CoordBoundItem;
 import vazkii.botania.api.item.HourglassMaterial;
 import vazkii.botania.api.item.Relic;
 import vazkii.botania.api.mana.ManaItem;
+import vazkii.botania.common.component.BotaniaDataComponents;
 import vazkii.botania.common.impl.mana.DefaultManaItemImpl;
 import vazkii.botania.common.item.BlackHoleTalismanItem;
 import vazkii.botania.common.item.BotaniaItems;
@@ -44,6 +46,7 @@ import vazkii.botania.common.item.rod.SkiesRodItem;
 import vazkii.botania.common.item.rod.UnstableReservoirRodItem;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 public final class ItemCapabilities {
 
@@ -91,13 +94,6 @@ public final class ItemCapabilities {
 				itemApi(HourglassMaterial.MANA_POWDER, BotaniaItems.MANA_POWDER)
 		));
 
-		registration.register(ManaItem.LOOKUP, List.of(
-				itemApi(DefaultManaItemImpl::new,
-						BotaniaItems.MANA_MIRROR, BotaniaItems.BAND_OF_MANA, BotaniaItems.GREATER_BAND_OF_MANA,
-						BotaniaItems.MANA_TABLET, BotaniaItems.TERRA_SHATTERER
-				)
-		));
-
 		registration.register(Relic.LOOKUP, List.of(
 				itemApi(DiceOfFateItem::makeRelic, BotaniaItems.DICE_OF_FATE),
 				itemApi(EyeOfTheFlugelItem::makeRelic, BotaniaItems.EYE_OF_THE_FLUGEL),
@@ -109,7 +105,18 @@ public final class ItemCapabilities {
 		));
 	}
 
+	public static void registerFallbackProviders(ApiProviderRegistration registration) {
+		registration.register(ManaItem.LOOKUP, List.of(
+				itemApi(DefaultManaItemImpl::new, stack -> stack.has(BotaniaDataComponents.MAX_MANA))
+		));
+	}
+
 	private ItemCapabilities() {}
+
+	public static <A> ItemRegistrationNoContext<A> itemApi(ItemRegistrationNoContext.Provider<A> provider,
+			Predicate<ItemStack> predicate) {
+		return ItemRegistrationNoContext.forItemPredicate(provider, predicate);
+	}
 
 	public static <A, C> ItemRegistrationWithContext<A, C> itemApi(ItemRegistrationWithContext.Provider<A, C> provider,
 			ItemLike... items) {

@@ -238,7 +238,9 @@ public final class BotaniaFabricCapabilities {
 				ItemApiLookup<A, Unit> lookup = getItemApiLookupById(apiId);
 				for (ItemRegistrationNoContext<A> registration : registrations) {
 					registration.apply(
-							(provider, items) -> lookup.registerForItems(provider::getApi, items)
+							(provider, items) -> lookup.registerForItems(provider::getApi, items),
+							(provider, predicate) -> lookup.registerFallback(
+									provider.withPredicate(predicate)::getApi)
 					);
 				}
 			}
@@ -249,7 +251,9 @@ public final class BotaniaFabricCapabilities {
 				ItemApiLookup<A, C> lookup = getItemApiLookupById(apiId);
 				for (ItemRegistrationWithContext<A, C> registration : registrations) {
 					registration.apply(
-							(provider, items) -> lookup.registerForItems(provider::getApi, items)
+							(provider, items) -> lookup.registerForItems(provider::getApi, items),
+							(provider, predicate) -> lookup.registerFallback(
+									provider.withPredicate(predicate)::getApi)
 					);
 				}
 			}
