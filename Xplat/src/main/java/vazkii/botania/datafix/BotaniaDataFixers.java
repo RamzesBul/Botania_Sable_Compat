@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.DyeColor;
 
 import java.util.Map;
 import java.util.Set;
@@ -145,8 +144,10 @@ public class BotaniaDataFixers {
 		ImmutableMap.Builder<String, String> blocks = ImmutableMap.builder();
 		ImmutableMap.Builder<String, String> items = ImmutableMap.builder();
 
-		for (DyeColor dyeColor : DyeColor.values()) {
-			String color = dyeColor.getName();
+		// DyeColor names in DyeColor order, hardcoded so DyeColor isn't loaded here: this runs inside DataFixers.<clinit>
+		// before Bootstrap, and mods mixing into DyeColor (e.g. KubeJS's KubeColor) touch registries on class init
+		for (String color : new String[] { "white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",
+				"light_gray", "cyan", "purple", "blue", "brown", "green", "red", "black" }) {
 			blocks.put("botania:" + color + "_shiny_flower", "botania:" + color + "_glimmering_flower");
 			blocks.put("botania:potted_" + color + "_shiny_flower", "botania:potted_" + color + "_glimmering_flower");
 			blocks.put("botania:" + color + "_mushroom", "botania:" + color + "_shimmering_mushroom");
