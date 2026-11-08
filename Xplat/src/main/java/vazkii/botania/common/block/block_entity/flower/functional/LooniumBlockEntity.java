@@ -54,6 +54,7 @@ import org.jetbrains.annotations.Nullable;
 import vazkii.botania.api.BotaniaAPI;
 import vazkii.botania.api.block_entity.FunctionalFlowerBlockEntity;
 import vazkii.botania.api.block_entity.RadiusDescriptor;
+import vazkii.botania.api.compat.Sable.SableCompat;
 import vazkii.botania.api.configdata.ConfigDataManager;
 import vazkii.botania.api.configdata.LooniumStructureConfiguration;
 import vazkii.botania.api.configdata.MobAttributeModifier;
@@ -466,7 +467,11 @@ public class LooniumBlockEntity extends FunctionalFlowerBlockEntity {
 		// structure ID and whether the position is inside a structure piece (false = only overall bounding box)
 		var structureMap = new Object2BooleanRBTreeMap<ResourceLocation>();
 		StructureManager structureManager = world.structureManager();
-		BlockPos pos = getBlockPos();
+		// On a sub-level the flower's block pos is a plot-grid cell far away from any generated terrain, so look the
+		// structures up at the world-space cell the flower currently occupies instead. Like in the plain world this
+		// only runs while no structures are detected yet (placement or block entity load), so the sub-level flying
+		// out of the structure afterwards keeps the attunement; this is a no-op in the plain world.
+		BlockPos pos = SableCompat.transformFromSable(world, getBlockPos());
 		Map<Structure, LongSet> structures = structureManager.getAllStructuresAt(pos);
 		for (Map.Entry<Structure, LongSet> entry : structures.entrySet()) {
 			Structure structure = entry.getKey();
